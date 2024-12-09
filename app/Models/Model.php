@@ -21,8 +21,7 @@ class Model
     private $select = '*';
     private $where, $values = [];
     private $orderBy;
-    protected $table1;
-    protected $table2; // Definido en el hijo
+    protected $table;
 
     public function __construct()
     {
@@ -85,7 +84,7 @@ class Model
     public function all(): array
     {
         // La consulta sería
-        $sql = "SELECT * FROM {$this->table1}";
+        $sql = "SELECT * FROM {$this->table}";
         // Y se llama a la sentencia
         $this->query($sql)->get();
         // para obtener los datos del select
@@ -96,7 +95,7 @@ class Model
     public function get(): array
     {
         if (empty($this->query)) {
-            $sql = "SELECT {$this->select} FROM {$this->table1}";
+            $sql = "SELECT {$this->select} FROM {$this->table}";
 
             // Se comprueban si están definidos para añadirlos a la cadena $sql
             if ($this->where) {
@@ -116,7 +115,7 @@ class Model
 
     public function find(int $id): array
     {
-        $sql = "SELECT * FROM {$this->table1} WHERE id = ?";
+        $sql = "SELECT * FROM {$this->table} WHERE id = ?";
 
         $this->query = $this->connection->prepare($sql);
         $this->query->execute([$id]);
@@ -180,7 +179,7 @@ class Model
 
         $fields = implode(', ', $fields);
 
-        $sql = "UPDATE {$this->table1} SET {$fields} WHERE id = ?";
+        $sql = "UPDATE {$this->table} SET {$fields} WHERE id = ?";
 
         $values = array_values($data);
         $values[] = $id;
@@ -192,10 +191,34 @@ class Model
     public function delete(int $id): void
     //delete se realizara en la tabla uno solamente ya que las siguiente se borraría en cascada.
     {
-        $sql = "DELETE FROM {$this->table1} WHERE id = ?";
+        $sql = "DELETE FROM {$this->table} WHERE id = ?";
 
         $this->query($sql, [$id], 'i');
     }
-    
-    
+
+    public function createTable(array $columns): void
+    {
+        if (!$this->table) {
+            die("Error: No se ha definido una tabla en el modelo hijo.");
+        }
+
+        //construyo la definición de las columnas
+        $columnDefinitions = [];
+        foreach ($columns as $name => $definition) {
+            $columnDefinitions[] = "{$name} {$definition}";
+        }
+
+        //combinamos las definiciones en una cadena separada por comas
+        $columnsSQL = implode(', ', $columnDefinitions);
+
+        //creamos la sentencia SQL
+        $sql = "CREATE TABLE IF NOT EXISTS {$this->table} ({$columnsSQL})";
+
+        try {
+            $this->connection->exec($sql);
+            echo "Tabla '{$this->table}' creada correctamente.\n";
+        } catch (\PDOException $e) {
+            die("Error al crear la tabla '{$this->table}': " . $e->getMessage());
+        }
+    }
 }
