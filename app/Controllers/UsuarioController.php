@@ -3,18 +3,18 @@
 namespace App\Controllers;
 
 use App\Models\UsuarioModel;
+use App\Database\Database;
 
 class UsuarioController extends Controller
 {
     public function index()
     {
-        // Creamos la conexión y tenemos acceso a todas las consultas SQL del modelo
+        // Crear la conexión y acceder al modelo
         $usuarioModel = new UsuarioModel();
-
-        // Se recogen los valores del modelo, ya se pueden usar en la vista
         $usuarios = $usuarioModel->consultaPrueba();
 
-        return $this->view('usuarios.index', $usuarios); // compact crea un array de índice usuarios
+        // Pasar los usuarios a la vista
+        return $this->view('usuarios.index', ['usuarios' => $usuarios]);
     }
 
     public function create()
@@ -24,21 +24,18 @@ class UsuarioController extends Controller
 
     public function store()
     {
-        // Volvemos a tener acceso al modelo
+        // Recoger los datos enviados por el formulario
         $usuarioModel = new UsuarioModel();
+        var_dump($_POST); // Debug
+        echo "Datos enviados desde POST.";
 
-        // Se llama a la función correpondiente, pasando como parámetro
-        // $_POST
-        var_dump($_POST);
-        echo "Se ha enviado desde POST";
-
-        // Podríamos redirigir a donde se desee después de insertar
-        //return $this->redirect('/contacts');
+        // Redirigir después de procesar los datos
+        // return $this->redirect('/usuarios');
     }
 
     public function show($id)
     {
-        echo "Mostrar usuario con id: {$id}";
+        echo "Mostrar usuario con ID: {$id}";
     }
 
     public function edit($id)
@@ -56,88 +53,129 @@ class UsuarioController extends Controller
         echo "Borrar usuario";
     }
 
-    // Función para mostrar cómo funciona con ejemplos
+    // Ejemplo de consulta con SQL Query Builder
     public function pruebasSQLQueryBuilder()
     {
-        // Se instancia el modelo
         $usuarioModel = new UsuarioModel();
-
-        // Descomentar consultas para ver la creación
+        // Ejemplo de consultas SQL comentadas
         // $usuarioModel->all();
         // $usuarioModel->select('columna1', 'columna2')->get();
-        // $usuarioModel->select('columna1', 'columna2')
-        //              ->where('columna1', '>', '3')
-        //              ->orderBy('columna1', 'DESC')
-        //              ->get();
-        // $usuarioModel->select('columna1', 'columna2')
-        //              ->where('columna1', '>', '3')
-        //              ->where('columna2', 'columna3')
-        //              ->where('columna2', 'columna3')
-        //              ->where('columna3', '!=', 'columna4', 'OR')
-        //              ->orderBy('columna1', 'DESC')
-        //              ->get();
-        // $usuarioModel->create(['id' => 1, 'nombre' => 'nombre1']);
-        // $usuarioModel->delete(['id' => 1]);
-        // $usuarioModel->update(['id' => 1], ['nombre' => 'NombreCambiado']);
-
         echo "Pruebas SQL Query Builder";
     }
 
-    //Metodo para inicializar la tabla usuarios
+    // Crear base de datos y poblarla con datos de prueba
     public function crearBaseDeDatos(): void
     {
         $usuarioModel = new UsuarioModel();
         $usuarioModel->crearTablasUsuarios();
-
         echo "Base de datos creada y poblada con datos de prueba.";
     }
 
-    //Metodo mostrar formulario de login
+    // Método para mostrar el formulario de login
     public function login()
     {
-        return $this->view("login");
+        return $this->view("usuarios.login");
     }
 
+    // Verificar el login y redirigir
     public function verificarLogin()
     {
         session_start();
 
-        // Verificar si se ha enviado el formulario
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $usuario = $_POST['usuario'] ?? null;
             $contrasena = $_POST['contraseña'] ?? null;
 
-            // Validar que los datos no estén vacíos
             if (empty($usuario) || empty($contrasena)) {
-                return $this->view('login', ['error' => 'Por favor, completa todos los campos.']);
+                return $this->view('usuarios.login', ['error' => 'Por favor, completa todos los campos.']);
             }
 
             try {
-                // Crear instancia del modelo
                 $usuarioModel = new UsuarioModel();
-
-                // Consultar el usuario por nombre de usuario
                 $usuarioDB = $usuarioModel->obtenerUsuarioPorNombre($usuario);
 
                 if ($usuarioDB && password_verify($contrasena, $usuarioDB['contrasena'])) {
-                    // Iniciar sesión
                     $_SESSION['usuario_id'] = $usuarioDB['id'];
                     $_SESSION['nombre_usuario'] = $usuarioDB['nombre_usuario'];
-
-                    // Guardar mensaje en la sesión
                     $_SESSION['mensaje'] = "Bienvenido, " . $_SESSION['nombre_usuario'];
-
-                    // Redirigir a la página principal
                     header('Location: /main');
                     exit();
                 } else {
-                    // Credenciales incorrectas
-                    return $this->view('login', ['error' => 'Usuario o contraseña incorrectos.']);
+                    return $this->view('usuarios.login', ['error' => 'Usuario o contraseña incorrectos.']);
                 }
             } catch (\Exception $e) {
-                return $this->view('login', ['error' => 'Error al procesar la solicitud: ' . $e->getMessage()]);
+                return $this->view('usuarios.login', ['error' => 'Error al procesar la solicitud: ' . $e->getMessage()]);
             }
         }
-        return $this->view('login');
+
+        return $this->view('usuarios.login');
+    }
+
+    // Mostrar formulario de registro
+    public function mostrarRegistro()
+    {
+        return $this->view('usuarios.registro');
+    }
+
+    public function verificarRegistro()
+    {
+        // Obtener los datos del formulario
+        $nombre = $_POST['nombre'];
+        $apellidos = $_POST['apellidos'];
+        $usuario = $_POST['usuario'];
+        $email = $_POST['email'];
+        $fecha_nacimiento = $_POST['fecha_nacimiento'];
+        $contraseña = $_POST['contraseña'];
+        $saldo = $_POST['saldo'];
+
+        // Instanciar el modelo de usuario
+        $usuarioModel = new UsuarioModel();
+
+        // Verificar si el nombre de usuario ya está registrado
+        $usuarioExistente = $usuarioModel->obtenerUsuarioPorNombre($usuario);
+        if ($usuarioExistente) {
+            return $this->view('usuarios.registro', ['error' => 'El nombre de usuario ya está registrado.']);
+        }
+
+        // Verificar si el correo electrónico ya está registrado
+        $emailExistente = $usuarioModel->obtenerUsuarioPorEmail($email);
+        if ($emailExistente) {
+            return $this->view('usuarios.registro', ['error' => 'El correo electrónico ya está registrado.']);
+        }
+
+        // Crear el hash de la contraseña
+        $contraseñaHash = password_hash($contraseña, PASSWORD_DEFAULT);
+
+        // Intentar registrar el nuevo usuario
+        try {
+            // Consulta SQL para insertar los datos del nuevo usuario
+            $sql = "INSERT INTO usuarios (nombre, apellidos, nombre_usuario, email, fecha_nacimiento, contrasena, saldo) 
+                VALUES (:nombre, :apellidos, :nombre_usuario, :email, :fecha_nacimiento, :contrasena, :saldo)";
+
+            // Conexión a la base de datos
+            $db = Database::getConnection();
+            $stmt = $db->prepare($sql);
+
+            // Vincular los parámetros
+            $stmt->bindParam(':nombre', $nombre);
+            $stmt->bindParam(':apellidos', $apellidos);
+            $stmt->bindParam(':nombre_usuario', $usuario);
+            $stmt->bindParam(':email', $email);
+            $stmt->bindParam(':fecha_nacimiento', $fecha_nacimiento);
+            $stmt->bindParam(':contrasena', $contraseñaHash);
+            $stmt->bindParam(':saldo', $saldo);
+
+            // Ejecutar la consulta
+            $stmt->execute();
+
+            // Mensaje de éxito
+            $_SESSION['mensaje'] = "Usuario registrado correctamente.";
+
+            // Redirigir al listado de usuarios (o donde desees)
+            return $this->redirect('/main');
+        } catch (\PDOException $e) {
+            // Manejar errores de la base de datos
+            return $this->view('usuarios.registro', ['error' => 'Error al registrar el usuario: ' . $e->getMessage()]);
+        }
     }
 }

@@ -26,6 +26,13 @@ Route::post('/login', [UsuarioController::class, 'verificarLogin']);
 // Ruta para redirigir a inicio cuando incie sesion
 Route::get('/main', [HomeController::class, 'index']);
 
+// Ruta para mostrar el formulario de registro
+Route::get('/registro', [UsuarioController::class, 'mostrarRegistro']); // Aquí se muestra el formulario de registro
+
+// Ruta para procesar el registro (POST)
+Route::post('/registro', [UsuarioController::class, 'verificarRegistro']); // Aquí se procesan los datos del formulario
+
+
 
 // Despachar las rutas
 Route::dispatch();

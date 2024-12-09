@@ -94,4 +94,19 @@ class UsuarioModel extends Model
             throw new \Exception("Error al consultar el usuario: " . $e->getMessage());
         }
     }
+    
+    public function obtenerUsuarioPorEmail($email)
+    {
+        try {
+            $db = Database::getConnection();
+            $sql = "SELECT * FROM usuarios WHERE email = :email";
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':email', $email);
+            $stmt->execute();
+
+            return $stmt->fetch(\PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            throw new \Exception("Error al consultar el correo electrónico: " . $e->getMessage());
+        }
+    }
 }
