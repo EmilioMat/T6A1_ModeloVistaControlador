@@ -4,16 +4,20 @@ namespace App\Models;
 
 class UsuarioModel extends Model
 {
-    // Nombre de la tabla que se realizarán las consultas
-    protected $table = 'usuarios';
+    protected $table1 = 'usuarios'; // Nombre de la tabla principal
 
-    // Aquí también se podría definir las consultas que son específicas
-    // para los usuarios. Para las demás llamaremos a los métodos de la
-    // clase padre.
-    // También se podría configurar la conexión para que la información se 
-    // recuperase de otra base de datos, otro usuario, etc. cambiando:
-    // protected $db_host = 'localhost';
-    // protected $db_user = 'root';
-    // protected $db_pass = '';
-    // protected $db_name = 'mvc_database'; 
+    public function definirTabla(): void
+    {
+        // Definir las columnas de la tabla
+        $columns = [
+            'id' => 'INT AUTO_INCREMENT PRIMARY KEY',
+            'nombre' => 'VARCHAR(50) NOT NULL',
+            'email' => 'VARCHAR(100) UNIQUE NOT NULL',
+            'saldo' => 'DECIMAL(10, 2) DEFAULT 0.00',
+            'fecha_creacion' => 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+        ];
+
+        // Crear la tabla utilizando el método del padre
+        $this->createTable($columns);
+    }
 }
