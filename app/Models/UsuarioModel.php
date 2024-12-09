@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Database\Database; // Asegúrate de importar la clase Database si la usas para interactuar con la base de datos
+use App\Database\Database;
 
 class UsuarioModel extends Model
 {
@@ -15,9 +15,12 @@ class UsuarioModel extends Model
         $columns = [
             'id' => 'INT AUTO_INCREMENT PRIMARY KEY',
             'nombre' => 'VARCHAR(50) NOT NULL',
+            'apellidos' => 'VARCHAR(50) NOT NULL',
+            'nombre_usuario' => 'VARCHAR(50) NOT NULL',
             'email' => 'VARCHAR(100) UNIQUE NOT NULL',
+            'fecha_nacimiento' => 'DATE NOT NULL',
+            'contrasena' => 'VARCHAR(255) NOT NULL',
             'saldo' => 'DECIMAL(10, 2) DEFAULT 0.00',
-            'fecha_creacion' => 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
         ];
 
         // Crear la tabla utilizando el método del padre
@@ -27,32 +30,40 @@ class UsuarioModel extends Model
     // Metodo para insertar datos de prueba
     public function insertarDatosPrueba(int $cantidad = 100): void
     {
-        // Instanciar el objeto de base de datos (usando PDO o el ORM de tu preferencia)
-        $db = Database::getConnection(); // Asegúrate de tener una clase para la conexión a la base de datos
+        $db = Database::getConnection();
 
         for ($i = 0; $i < $cantidad; $i++) {
             // Generar valores de prueba aleatorios
             $nombre = 'Usuario_' . $i;
+            $apellidos = 'Apellido_' . $i;
+            $nombre_usuario = 'user_' . $i;
             $email = 'usuario_' . $i . '@ejemplo.com';
 
-            // Generar saldo aleatorio entre 10 y 1000 (puedes ajustar el rango según lo necesites)
-            $saldo = rand(10, 1000); // Genera un número aleatorio entre 10 y 1000
+            // Generar fecha de nacimiento aleatoria
+            $fecha_nacimiento = date('Y-m-d', strtotime('-' . rand(18, 50) . ' years'));
+
+            // contrasena  "123456"
+            $contrasena = password_hash('123456', PASSWORD_DEFAULT);
+
+            // Generar saldo aleatorio entre 10 y 1000
+            $saldo = rand(10, 1000);
 
             // Insertar los datos en la base de datos
-            $sql = "INSERT INTO {$this->table} (nombre, email, saldo) VALUES (:nombre, :email, :saldo)";
+            $sql = "INSERT INTO {$this->table} (nombre, apellidos, nombre_usuario, email, fecha_nacimiento, contrasena, saldo) VALUES (:nombre, :apellidos, :nombre_usuario, :email, :fecha_nacimiento, :contrasena, :saldo)";
             $stmt = $db->prepare($sql);
             $stmt->bindParam(':nombre', $nombre);
+            $stmt->bindParam(':apellidos', $apellidos);
+            $stmt->bindParam(':nombre_usuario', $nombre_usuario);
             $stmt->bindParam(':email', $email);
+            $stmt->bindParam(':fecha_nacimiento', $fecha_nacimiento);
+            $stmt->bindParam(':contrasena', $contrasena);
             $stmt->bindParam(':saldo', $saldo);
             $stmt->execute();
         }
 
-
         // Guardar el mensaje en la sesión
         session_start();
-        $_SESSION['mensaje'] = "Base de datos creada, se han insertado {$cantidad} usuarios de prueba con saldo aleatorio.";
-
-        //echo "Se han insertado {$cantidad} usuarios de prueba con saldo aleatorio.";
+        $_SESSION['mensaje'] = "Base de datos creada, se han insertado {$cantidad} usuarios de prueba con saldo aleatorio";
 
         header('Location: /');
         exit();
