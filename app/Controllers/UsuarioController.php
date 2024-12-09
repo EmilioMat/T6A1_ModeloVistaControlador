@@ -8,7 +8,7 @@ class UsuarioController extends Controller
 {
     public function index()
     {
-        // Creamos la conexión y tenemos acceso a todas las consultas sql del modelo
+        // Creamos la conexión y tenemos acceso a todas las consultas SQL del modelo
         $usuarioModel = new UsuarioModel();
 
         // Se recogen los valores del modelo, ya se pueden usar en la vista
@@ -56,28 +56,37 @@ class UsuarioController extends Controller
         echo "Borrar usuario";
     }
 
-    // Función para mostrar como fuciona con ejemplos
+    // Nuevo método para inicializar la tabla usuarios
+    public function inicializarTablasUsuarios()
+    {
+        $usuarioModel = new UsuarioModel(); // Instancia del modelo
+        $usuarioModel->definirTabla(); // Llama al método para crear la tabla
+        echo "Tabla 'usuarios' inicializada correctamente.";
+    }
+
+    // Función para mostrar cómo funciona con ejemplos
     public function pruebasSQLQueryBuilder()
     {
         // Se instancia el modelo
         $usuarioModel = new UsuarioModel();
+
         // Descomentar consultas para ver la creación
-        //$usuarioModel->all();
-        //$usuarioModel->select('columna1', 'columna2')->get();
+        // $usuarioModel->all();
+        // $usuarioModel->select('columna1', 'columna2')->get();
         // $usuarioModel->select('columna1', 'columna2')
-        //             ->where('columna1', '>', '3')
-        //             ->orderBy('columna1', 'DESC')
-        //             ->get();
+        //              ->where('columna1', '>', '3')
+        //              ->orderBy('columna1', 'DESC')
+        //              ->get();
         // $usuarioModel->select('columna1', 'columna2')
-        //             ->where('columna1', '>', '3')
-        //             ->where('columna2', 'columna3')
-        //             ->where('columna2', 'columna3')
-        //             ->where('columna3', '!=', 'columna4', 'OR')
-        //             ->orderBy('columna1', 'DESC')
-        //             ->get();
-        //$usuarioModel->create(['id' => 1, 'nombre' => 'nombre1']);
-        //$usuarioModel->delete(['id' => 1]);
-        //$usuarioModel->update(['id' => 1], ['nombre' => 'NombreCambiado']);
+        //              ->where('columna1', '>', '3')
+        //              ->where('columna2', 'columna3')
+        //              ->where('columna2', 'columna3')
+        //              ->where('columna3', '!=', 'columna4', 'OR')
+        //              ->orderBy('columna1', 'DESC')
+        //              ->get();
+        // $usuarioModel->create(['id' => 1, 'nombre' => 'nombre1']);
+        // $usuarioModel->delete(['id' => 1]);
+        // $usuarioModel->update(['id' => 1], ['nombre' => 'NombreCambiado']);
 
         echo "Pruebas SQL Query Builder";
     }
