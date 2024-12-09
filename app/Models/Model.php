@@ -7,71 +7,73 @@ namespace App\Models;
  * un Query Builder. Los return son ejemplo en caso de consultar la tabla
  * usuarios.
  */
+require_once '../vendor/autoload.php';
+$dotenv = \Dotenv\Dotenv::createImmutable('..');
+$dotenv->load();
 
 class Model
 {
-    protected $db_host = 'localhost';
-    protected $db_user = 'root'; // Las credenciales se deben guardar en un archivo .env
-    protected $db_pass = '';
-    protected $db_name = 'mvc_database';
 
-    protected $connection;
+    private $connection;
 
-    protected $query; // Consulta a ejecutar
+    private $query; // Consulta a ejecutar
 
-    protected $select = '*';
-    protected $where, $values = [];
-    protected $orderBy;
+    private $select = '*';
+    private $where, $values = [];
+    private $orderBy;
+    protected $table1;
+    protected $table2; // Definido en el hijo
 
-    protected $table; // Definido en la clase hijo
-
-    public function __construct()  // Se puede modificar según montéis la conexión
+    public function __construct()
     {
+
         $this->connection();
     }
 
-    public function connection()
+    private function connection(): void
     {
-        // Conexión a la base de datos, por hacer
+        $dbHost = $_ENV['DB_HOST'];
+        $dbName = $_ENV['DB_NAME'];
+        $dbUser = $_ENV['DB_USER'];
+        $dbPass = $_ENV['DB_PASS'];
+        try {
+            $dsn = "mysql:host={$dbHost};dbname={$dbName}";
+            $this->connection = new \PDO($dsn, $dbUser, $dbPass);
+            $this->connection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        } catch (\PDOException $e) {
+            die("Error de conexión: " . $e->getMessage());
+        }
     }
 
     // QUERY BUILDER
     // Consultas: 
 
     // Recibe la cadena de consulta y la ejecuta
-    public function query($sql, $data = [], $params = null)
+    private function query(string $sql, array $data = []): object
     {
 
-        echo "Consulta: {$sql} <br>"; // borrar, solo para ver ejemplo
-        echo "Data: ";
-        var_dump($data);
-        echo "Params: ";
-        var_dump($params);
-        echo "<br>";
 
         // Si hay $data se lanzará una consulta preparada, en otro caso una normal
-        // Está configurado para mysqli, cambiar para usar PDO
         if ($data) {
-            if ($params == null) {
-                // s para string. sssd para 3 strings y un entero. https://www.php.net/manual/es/mysqli-stmt.bind-param.php
-                // por ejemplo: $stmt->bind_param('sssd', $code, $language, $official, $percent);
-                $params = str_repeat('s', count($data));
-            }
-            // Sentencia preparada, pasando array como parámetros
-            // Cambiar a PDO
-            $smtp = $this->connection->prepare($sql);
-            $smtp->bind_param($params, ...$data); // con ... el array cambia a variables
-            $smtp->execute();
 
-            $this->query = $smtp->get_result();
+            $stmp = $this->connection->prepare($sql);
+
+            // Vincular los parámetros dinámicamente
+            foreach ($data as $key => $value) {
+
+                $stmp->bindValue($key + 1, $value);
+            }
+
+            $stmp->execute();
         } else {
             $this->query = $this->connection->query($sql);
         }
 
+
         return $this;
     }
 
-    public function select(...$columns)
+    public function select(string ...$columns): object
     {
         // Separamos el array en una cadena con ,
         $this->select = implode(', ', $columns);
@@ -80,19 +82,21 @@ class Model
     }
 
     // Devuelve todos los registros de una tabla
-    public function all()
+    public function all(): array
     {
         // La consulta sería
-        $sql = "SELECT * FROM {$this->table}";
+        $sql = "SELECT * FROM {$this->table1}";
         // Y se llama a la sentencia
         $this->query($sql)->get();
+        // para obtener los datos del select
+        return $this->query->fetchall(\PDO::FETCH_ASSOC);
     }
 
     // Consulta base a la que se irán añadiendo partes
-    public function get()
+    public function get(): array
     {
         if (empty($this->query)) {
-            $sql = "SELECT {$this->select} FROM {$this->table}";
+            $sql = "SELECT {$this->select} FROM {$this->table1}";
 
             // Se comprueban si están definidos para añadirlos a la cadena $sql
             if ($this->where) {
@@ -103,19 +107,24 @@ class Model
                 $sql .= " ORDER BY {$this->orderBy}";
             }
 
-            $this->query($sql, $this->values);
+            $this->query = $this->connection->prepare($sql);
+            $this->query->execute($this->values);
+            //para obtener los datos del select
+            return $this->query->fetchall(\PDO::FETCH_ASSOC);
         }
     }
 
-    public function find($id)
+    public function find(int $id): array
     {
-        $sql = "SELECT * FROM {$this->table} WHERE id = ?";
+        $sql = "SELECT * FROM {$this->table1} WHERE id = ?";
 
-        $this->query($sql, [$id], 'i');
+        $this->query = $this->connection->prepare($sql);
+        $this->query->execute([$id]);
+        return $this->query->fetch(\PDO::FETCH_ASSOC);
     }
 
     // Se añade where a la sentencia con operador específico
-    public function where($column, $operator, $value = null, $chainType = 'AND')
+    public function where(string $column, string $operator, string $value = null, string $chainType = 'AND'): object
     {
         if ($value == null) { // Si no se pasa operador, por defecto =
             $value = $operator;
@@ -135,7 +144,7 @@ class Model
     }
 
     // Se añade orderBy a la sentencia
-    public function orderBy($column, $order = 'ASC')
+    public function orderBy(string $column, string $order = 'ASC'): object
     {
         if ($this->orderBy) {
             $this->orderBy .= ", {$column} {$order}";
@@ -146,22 +155,22 @@ class Model
         return $this;
     }
 
-    // Insertar, recibimos un $_GET o $_POST
-    public function create($data)
+    // Insertar, recibimos un $_GET o $_POST en $data el parametro table es para definir en que tabla insertamos
+    public function create(array $data, string $table): object
     {
         $columns = array_keys($data); // array de claves del array
         $columns = implode(', ', $columns); // y creamos una cadena separada por ,
 
         $values = array_values($data); // array de los valores
 
-        $sql = "INSERT INTO {$this->table} ({$columns}) VALUES (?" . str_repeat(',?', count($values) - 1) . ")";
+        $sql = "INSERT INTO {$table} ({$columns}) VALUES (?" . str_repeat(', ? ', count($values) - 1) . ")";
 
-        $this->query($sql, $values, $values);
+        $this->query($sql, $values);
 
         return $this;
     }
 
-    public function update($id, $data)
+    public function update(int $id, array $data): object
     {
         $fields = [];
 
@@ -171,7 +180,7 @@ class Model
 
         $fields = implode(', ', $fields);
 
-        $sql = "UPDATE {$this->table} SET {$fields} WHERE id = ?";
+        $sql = "UPDATE {$this->table1} SET {$fields} WHERE id = ?";
 
         $values = array_values($data);
         $values[] = $id;
@@ -180,20 +189,96 @@ class Model
         return $this;
     }
 
-    public function delete($id)
+    public function delete(int $id): void
+    //delete se realizara en la tabla uno solamente ya que las siguiente se borraría en cascada.
     {
-        $sql = "DELETE FROM {$this->table} WHERE id = ?";
+        $sql = "DELETE FROM {$this->table1} WHERE id = ?";
 
         $this->query($sql, [$id], 'i');
     }
-
-    // Para pruebas, devuelve como si fuese unan consulta, borrar
-    public function consultaPrueba()
+    // en este metodo llamamos dentro al select y las claves para comparar y hacer el join las pasamos desde fuera
+    public function innerJoin(string $primaria, string $foranea): array
     {
-        return [
-            ['id' => 1, 'nombre' => 'Nombre1', 'apellido' => 'Apellido1'],
-            ['id' => 1, 'nombre' => 'Nombre2', 'apellido' => 'Apellido2'],
-            ['id' => 1, 'nombre' => 'Nombre3', 'apellido' => 'Apellido3']
-        ];
+        //consulta
+        $sql = "SELECT {$this->select} FROM {$this->table1} INNER JOIN {$this->table2} ON {$primaria}={$foranea}";
+        $this->query = $this->connection->prepare($sql);
+        
+        $this->query->execute();
+        //para obtener los datos del select
+        return $this->query->fetchall(\PDO::FETCH_ASSOC);
     }
+    // pasamos $data 1 que serian los campos correspondientes al objeto padre producto producto->getnombre, etc...
+    //data2 sería pro ejmplo solo la talla en el caso de ropa ropa->get
+    public function crearProducto(array $data1, array $data2): string {
+        try {
+            $this->connection->beginTransaction();
+             //data1 sería el equivalente a los valores de la tabla1 Id, nombre, precio
+            $this->create($data1, $this->table1);
+            /* data2 sería el equivalente a los valores de la tabla2 en este caso solo talla u otros equivalentes segun el producto
+            ya que id_producto viene definido por el insert anterior */
+             // definimos y concatenamos aquí el lastInsertID()
+            $lastInsertedId = $this->connection->lastInsertId();
+            $data2 ['id_producto']= $lastInsertedId;
+            $this->create($data2, $this->table2);
+            $this->connection->commit();
+            //  echos para pruebas en la app se gestionara con un mensaje en pantalla
+            $mensaje = "El nuevo producto se registró correctamente";
+            return $mensaje;
+             } catch (\Exception $e) {
+                // deshacemos la transacción 
+                $this->connection->rollback();
+                $error = "Error en el registro" . $e->getMessage();
+               return $error;
+            }
+       
+        
+       
+
+    }
+
+    // en este metodo llamamos dentro al select y las claves para comparar y hacer el join las pasamos desde fuera
+    public function innerJoinFind(string $primaria, string $foranea, int $id): array
+    {
+        //consulta
+        $sql = "SELECT {$this->select} FROM {$this->table1} INNER JOIN {$this->table2} ON {$primaria}={$foranea} WHERE productos.id =?";
+        $this->query = $this->connection->prepare($sql);
+        
+        $this->query->execute([$id]);
+        //para obtener los datos del select
+        return $this->query->fetch(\PDO::FETCH_ASSOC);
+    }
+    public function actualizarDatos(array $data):object{
+        
+
+        $sql = "CALL actualizar_datos(?, ?, ?, ?)";
+
+        $values = array_values($data);
+
+        $this->query($sql, $values);
+        return $this;
+    
+    }
+    public function cambiarTallas(string $talla): array{
+        //con este procedimiento cambiamos la talla de toda la ropa de una talla seleccionada a XL que deseemos 
+        //solo hay que pasarle la talla 
+        $sql = "SET @mi_talla = ?";
+        $this->query = $this->connection->prepare($sql);
+        $this->query->execute([$talla]);
+      
+        $sql = "CALL cambiar_talla(@mi_talla, @cantidad)";
+    
+        
+        $this->query = $this->connection->prepare($sql);
+        $this->query->execute();
+    
+        // Recuperar el valor de los parámetros OUT/INOUT
+        $sql = "SELECT @mi_talla AS nueva_talla, @cantidad";
+        $this->query = $this->connection->prepare($sql);
+        $this->query->execute();
+    
+        
+        return $this->query->fetch(\PDO::FETCH_ASSOC);
+    }
+    
+    
 }
