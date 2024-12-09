@@ -14,11 +14,15 @@ Route::get('/usuario', [UsuarioController::class, 'index']);
 Route::get('/usuario/pruebas', [UsuarioController::class, 'pruebasSQLQueryBuilder']);
 Route::get('/usuario/:id', [UsuarioController::class, 'show']);
 Route::post('/usuario', [UsuarioController::class, 'store']);
-Route::get('/contacto', [ContactoController::class, 'index']);
-Route::get('/formulario', [FormularioController::class, 'index']);
-Route::get('/curso', [CursoController::class, 'index']);
-Route::get('/curso/ruta1', [CursoController::class, 'index']);
-Route::get('/curso/:variable', [CursoController::class, 'index']);
-Route::get('/otro/:variable1/:variable2/:variable3', [OtroController::class, 'index']);
+//Route::get('/contacto', [ContactoController::class, 'index']);
+//Route::get('/formulario', [FormularioController::class, 'index']);
+//Route::get('/curso', [CursoController::class, 'index']);
+//Route::get('/curso/ruta1', [CursoController::class, 'index']);
+//Route::get('/curso/:variable', [CursoController::class, 'index']);
+//Route::get('/otro/:variable1/:variable2/:variable3', [OtroController::class, 'index']);
+
+
+$router->get('/inicializar-tabla-usuarios', [\App\Controllers\UsuarioController::class, 'inicializarTablasUsuarios']);
+
  
 Route::dispatch();
