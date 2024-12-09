@@ -79,4 +79,19 @@ class UsuarioModel extends Model
         // Insertar datos de prueba
         $this->insertarDatosPrueba();
     }
+
+    public function obtenerUsuarioPorNombre($nombreUsuario)
+    {
+        try {
+            $db = Database::getConnection();
+            $sql = "SELECT * FROM usuarios WHERE nombre_usuario = :usuario";
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':usuario', $nombreUsuario);
+            $stmt->execute();
+
+            return $stmt->fetch(\PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            throw new \Exception("Error al consultar el usuario: " . $e->getMessage());
+        }
+    }
 }

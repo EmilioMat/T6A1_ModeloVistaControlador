@@ -83,12 +83,61 @@ class UsuarioController extends Controller
         echo "Pruebas SQL Query Builder";
     }
 
-    // Metodo para inicializar la tabla usuarios
+    //Metodo para inicializar la tabla usuarios
     public function crearBaseDeDatos(): void
     {
         $usuarioModel = new UsuarioModel();
         $usuarioModel->crearTablasUsuarios();
 
         echo "Base de datos creada y poblada con datos de prueba.";
+    }
+
+    //Metodo mostrar formulario de login
+    public function login()
+    {
+        return $this->view("login");
+    }
+
+    public function verificarLogin()
+    {
+        session_start();
+
+        // Verificar si se ha enviado el formulario
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $usuario = $_POST['usuario'] ?? null;
+            $contrasena = $_POST['contraseña'] ?? null;
+
+            // Validar que los datos no estén vacíos
+            if (empty($usuario) || empty($contrasena)) {
+                return $this->view('login', ['error' => 'Por favor, completa todos los campos.']);
+            }
+
+            try {
+                // Crear instancia del modelo
+                $usuarioModel = new UsuarioModel();
+
+                // Consultar el usuario por nombre de usuario
+                $usuarioDB = $usuarioModel->obtenerUsuarioPorNombre($usuario);
+
+                if ($usuarioDB && password_verify($contrasena, $usuarioDB['contrasena'])) {
+                    // Iniciar sesión
+                    $_SESSION['usuario_id'] = $usuarioDB['id'];
+                    $_SESSION['nombre_usuario'] = $usuarioDB['nombre_usuario'];
+
+                    // Guardar mensaje en la sesión
+                    $_SESSION['mensaje'] = "Bienvenido, " . $_SESSION['nombre_usuario'];
+
+                    // Redirigir a la página principal
+                    header('Location: /main');
+                    exit();
+                } else {
+                    // Credenciales incorrectas
+                    return $this->view('login', ['error' => 'Usuario o contraseña incorrectos.']);
+                }
+            } catch (\Exception $e) {
+                return $this->view('login', ['error' => 'Error al procesar la solicitud: ' . $e->getMessage()]);
+            }
+        }
+        return $this->view('login');
     }
 }
