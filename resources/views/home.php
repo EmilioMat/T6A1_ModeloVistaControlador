@@ -1,18 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <?php require 'head.php'; ?>
 </head>
 
 <body>
-    <p class="header-paragraph">Página principal</p>
-    <?php
-    include('footer.php');
-    ?>
+    <?php require 'header.php'; ?>
+    <?php require 'navigation.php'; ?>
+    <?php require 'main.php'; ?>
+    <?php require 'footer.php'; ?>
 </body>
 
 </html>

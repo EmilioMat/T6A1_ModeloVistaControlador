@@ -13,7 +13,7 @@ Route::get('/usuario/:id', [UsuarioController::class, 'show']);
 Route::post('/usuario', [UsuarioController::class, 'store']);
 
 // Nueva ruta para inicializar la tabla de usuarios
-Route::get('/inicializar-tabla-usuarios', [UsuarioController::class, 'inicializarTablasUsuarios']);
+Route::get('/usuario/crear-base', [UsuarioController::class, 'crearBaseDeDatos']);
 
 // Despachar las rutas
 Route::dispatch();

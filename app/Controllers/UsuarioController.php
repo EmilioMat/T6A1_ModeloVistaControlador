@@ -56,14 +56,6 @@ class UsuarioController extends Controller
         echo "Borrar usuario";
     }
 
-    // Nuevo método para inicializar la tabla usuarios
-    public function inicializarTablasUsuarios()
-    {
-        $usuarioModel = new UsuarioModel(); // Instancia del modelo
-        $usuarioModel->definirTabla(); // Llama al método para crear la tabla
-        echo "Tabla 'usuarios' inicializada correctamente.";
-    }
-
     // Función para mostrar cómo funciona con ejemplos
     public function pruebasSQLQueryBuilder()
     {
@@ -89,5 +81,14 @@ class UsuarioController extends Controller
         // $usuarioModel->update(['id' => 1], ['nombre' => 'NombreCambiado']);
 
         echo "Pruebas SQL Query Builder";
+    }
+
+    // Metodo para inicializar la tabla usuarios
+    public function crearBaseDeDatos(): void
+    {
+        $usuarioModel = new UsuarioModel();
+        $usuarioModel->crearTablasUsuarios();
+
+        echo "Base de datos creada y poblada con datos de prueba.";
     }
 }
