@@ -161,7 +161,7 @@ class UsuarioController extends Controller
 
             $_SESSION['mensaje'] = "Usuario registrado correctamente.";
 
-            // Redirigir al listado de usuarios
+            // Redirigir al dado de usuarios
             return $this->redirect('/main');
         } catch (\PDOException $e) {
             return $this->view('usuarios.registro', ['error' => 'Error al registrar el usuario: ' . $e->getMessage()]);
@@ -170,7 +170,9 @@ class UsuarioController extends Controller
 
     public function mostrarPanel($id)
     {
-        // Verificar si el usuario está autenticado
+
+        if ($id == $_SESSION['usuario_id']) {
+            // Verificar si el usuario está autenticado
         if (!isset($_SESSION['usuario_id'])) {
             $_SESSION['mensaje'] = "Debe iniciar sesión para acceder a esta página.";
             return $this->view('/login');
@@ -191,6 +193,9 @@ class UsuarioController extends Controller
 
         // Cargar la vista del panel con los datos del usuario
         return $this->view('usuarios.panel', ['usuario' => $usuario]);
+        }else{
+            return $this->view('home',  $_SESSION['mensaje'] = "No tienes acceso para acceder a este usuario");
+        }
     }
 
     public function actualizarUsuario()
@@ -275,6 +280,57 @@ class UsuarioController extends Controller
         return $this->redirect('/main');
     }
 
+    public function listarUsuarios()
+    {
+        try {
+            $usuarioModel = new UsuarioModel();
+            $usuarios = $usuarioModel->getAllUsers();
+            return $this->view('usuarios.lista', ['usuarios' => $usuarios]);
+        } catch (\Exception $e) {
+            die("Error al cargar la lista de usuarios: " . $e->getMessage());
+        }
+    }
+
+    public function editarUsuario()
+    {
+        $id = $_GET['id'] ?? null;
+
+        if (!$id) {
+            die("El ID del usuario es requerido.");
+        }
+
+        try {
+            $usuarioModel = new UsuarioModel();
+            $usuario = $usuarioModel->obtenerUsuarioPorId($id);
+
+            if (!$usuario) {
+                die("Usuario no encontrado.");
+            }
+
+            return $this->view('usuarios.panel', ['usuario' => $usuario]);
+        } catch (\Exception $e) {
+            die("Error al cargar el usuario: " . $e->getMessage());
+        }
+    }
+
+    public function eliminarUsuario()
+    {
+        $id = $_POST['id'] ?? null;
+
+        if (!$id) {
+            die("El ID del usuario es requerido.");
+        }
+
+        try {
+            $usuarioModel = new UsuarioModel();
+            $usuarioModel->deleteUser($id);
+            $_SESSION['mensaje'] = "Usuario eliminado correctamente.";
+            $this->redirect('/main');
+            exit();
+        } catch (\Exception $e) {
+            die("Error al eliminar el usuario: " . $e->getMessage());
+        }
+    }
 
 
     public function logout()

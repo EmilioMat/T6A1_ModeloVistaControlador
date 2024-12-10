@@ -12,6 +12,11 @@
         </a>
 
         <!-- Enlace para cerrar sesión -->
+        <a href="/lista" class="nav__link">
+            <p class="nav__text">Listado de Usuarios</p>
+        </a>
+
+        <!-- Enlace para cerrar sesión -->
         <a href="/logout" class="nav__link" id="logout-link">
             <p class="nav__text">Cerrar Sesión</p>
         </a>

@@ -175,47 +175,65 @@ class UsuarioModel extends Model
     }
 
 
-     // Transacción para transferir saldo entre usuarios
-     public function transferirSaldo($usuarioIdRemitente, $nombreUsuarioDestino, $saldo)
-     {
-         $db = Database::getConnection();
-         try {
-             $db->beginTransaction();
- 
-             // Obtener el saldo del usuario remitente
-             $sql = "SELECT saldo FROM usuarios WHERE id = :id";
-             $stmt = $db->prepare($sql);
-             $stmt->bindParam(':id', $usuarioIdRemitente);
-             $stmt->execute();
-             $remitente = $stmt->fetch(\PDO::FETCH_ASSOC);
- 
-             if (!$remitente || $remitente['saldo'] < $saldo) {
-                 throw new \Exception("Saldo insuficiente.");
-             }
- 
-             // Restar saldo al usuario remitente
-             $sql = "UPDATE usuarios SET saldo = saldo - :saldo WHERE id = :id";
-             $stmt = $db->prepare($sql);
-             $stmt->bindParam(':saldo', $saldo);
-             $stmt->bindParam(':id', $usuarioIdRemitente);
-             $stmt->execute();
- 
-             // Sumar saldo al usuario destinatario
-             $sql = "UPDATE usuarios SET saldo = saldo + :saldo WHERE nombre_usuario = :nombreUsuario";
-             $stmt = $db->prepare($sql);
-             $stmt->bindParam(':saldo', $saldo);
-             $stmt->bindParam(':nombreUsuario', $nombreUsuarioDestino);
-             $stmt->execute();
- 
-             if ($stmt->rowCount() === 0) {
-                 throw new \Exception("El usuario destinatario no existe.");
-             }
- 
-             $db->commit();
-             return true;
-         } catch (\Exception $e) {
-             $db->rollBack();
-             return $e->getMessage();
-         }
-     }
+    // Transacción para transferir saldo entre usuarios
+    public function transferirSaldo($usuarioIdRemitente, $nombreUsuarioDestino, $saldo)
+    {
+        $db = Database::getConnection();
+        try {
+            $db->beginTransaction();
+
+            // Obtener el saldo del usuario remitente
+            $sql = "SELECT saldo FROM usuarios WHERE id = :id";
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':id', $usuarioIdRemitente);
+            $stmt->execute();
+            $remitente = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$remitente || $remitente['saldo'] < $saldo) {
+                throw new \Exception("Saldo insuficiente.");
+            }
+
+            // Restar saldo al usuario remitente
+            $sql = "UPDATE usuarios SET saldo = saldo - :saldo WHERE id = :id";
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':saldo', $saldo);
+            $stmt->bindParam(':id', $usuarioIdRemitente);
+            $stmt->execute();
+
+            // Sumar saldo al usuario destinatario
+            $sql = "UPDATE usuarios SET saldo = saldo + :saldo WHERE nombre_usuario = :nombreUsuario";
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':saldo', $saldo);
+            $stmt->bindParam(':nombreUsuario', $nombreUsuarioDestino);
+            $stmt->execute();
+
+            if ($stmt->rowCount() === 0) {
+                throw new \Exception("El usuario destinatario no existe.");
+            }
+
+            $db->commit();
+            return true;
+        } catch (\Exception $e) {
+            $db->rollBack();
+            return $e->getMessage();
+        }
+    }
+
+
+    public function getAllUsers()
+    {
+        $db = Database::getConnection();
+        $stmt = $db->prepare("SELECT id, nombre, apellidos, nombre_usuario, email FROM usuarios");
+        $stmt->execute();
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    public function deleteUser($id)
+    {
+        $db = Database::getConnection();
+        $stmt = $db->prepare("DELETE FROM usuarios WHERE id = :id");
+        $stmt->bindParam(':id', $id);
+        $stmt->execute();
+        return $stmt->rowCount();
+    }
 }
