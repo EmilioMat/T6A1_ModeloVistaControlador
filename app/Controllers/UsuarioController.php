@@ -80,7 +80,6 @@ class UsuarioController extends Controller
     // Verificar el login y redirigir
     public function verificarLogin()
     {
-        session_start();
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $usuario = $_POST['usuario'] ?? null;
@@ -146,27 +145,19 @@ class UsuarioController extends Controller
         // Crear el hash de la contraseña
         $contraseñaHash = password_hash($contraseña, PASSWORD_DEFAULT);
 
-        // Intentar registrar el nuevo usuario
+        // registrar el nuevo usuario
         try {
-            // Consulta SQL para insertar los datos del nuevo usuario
-            $sql = "INSERT INTO usuarios (nombre, apellidos, nombre_usuario, email, fecha_nacimiento, contrasena, saldo) 
-                VALUES (:nombre, :apellidos, :nombre_usuario, :email, :fecha_nacimiento, :contrasena, :saldo)";
+            $datosUsuario = [
+                'nombre' => $nombre,
+                'apellidos' => $apellidos,
+                'usuario' => $usuario,
+                'email' => $email,
+                'fecha_nacimiento' => $fecha_nacimiento,
+                'contrasena' => $contraseñaHash,
+                'saldo' => $saldo
+            ];
 
-            // Conexión a la base de datos
-            $db = Database::getConnection();
-            $stmt = $db->prepare($sql);
-
-            // Vincular los parámetros
-            $stmt->bindParam(':nombre', $nombre);
-            $stmt->bindParam(':apellidos', $apellidos);
-            $stmt->bindParam(':nombre_usuario', $usuario);
-            $stmt->bindParam(':email', $email);
-            $stmt->bindParam(':fecha_nacimiento', $fecha_nacimiento);
-            $stmt->bindParam(':contrasena', $contraseñaHash);
-            $stmt->bindParam(':saldo', $saldo);
-
-            // Ejecutar la consulta
-            $stmt->execute();
+            $usuarioModel->registrarUsuario($datosUsuario);
 
             $_SESSION['mensaje'] = "Usuario registrado correctamente.";
 
@@ -205,18 +196,18 @@ class UsuarioController extends Controller
     public function actualizarUsuario()
     {
         $usuarioId = $_SESSION['usuario_id'];
-       
+
         // Comprobar si se ha enviado el formulario
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = $_POST["id"] ?? '';
             $nombre = $_POST['nombre'] ?? '';
             $apellidos = $_POST['apellidos'] ?? '';
-            $usuario = $_POST['usuario'] ?? '';
+            $nombre_usuario = $_POST['nombre_usuario'] ?? '';
             $email = $_POST['email'] ?? '';
             $fecha_nacimiento = $_POST['fecha_nacimiento'] ?? '';
 
             // Validaciones de campos
-            if (empty($nombre) || empty($apellidos) || empty($usuario) || empty($email) || empty($fecha_nacimiento)) {
+            if (empty($nombre) || empty($apellidos) || empty($nombre_usuario) || empty($email) || empty($fecha_nacimiento)) {
                 return $this->view('usuarios.panel', [
                     'errores' => ['general' => 'Por favor, completa todos los campos.'],
                     'usuario' => $_POST
@@ -228,7 +219,7 @@ class UsuarioController extends Controller
                 $usuarioModel = new UsuarioModel();
 
                 // Llamar al método del modelo para actualizar los datos
-                $usuarioModel->updateUser($id, $nombre, $apellidos, $usuario, $email, $fecha_nacimiento);
+                $usuarioModel->updateUser($id, $nombre, $apellidos, $nombre_usuario, $email, $fecha_nacimiento);
 
                 $_SESSION['mensaje'] = "Datos actualizados correctamente.";
                 header('Location: /main');
@@ -243,7 +234,45 @@ class UsuarioController extends Controller
         }
 
         // Si no es POST, mostrar el formulario de edición
-        return $this->view('usuario.panel');
+        return $this->view('usuarios.panel');
+    }
+
+    public function enviarSaldo()
+    {
+        if (!isset($_SESSION['usuario_id'])) {
+            $_SESSION['mensaje'] = "Debe iniciar sesión para enviar saldo.";
+            return $this->redirect('/login');
+        }
+
+        // Comprobar si se ha enviado el formulario
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $nombreUsuarioDestino = $_POST['usuarioDestino'] ?? '';
+            $saldo = $_POST['saldo'] ?? 0;
+
+            // Validar datos
+            if (empty($nombreUsuarioDestino) || $saldo <= 0) {
+                $_SESSION['mensaje'] = "Por favor, ingresa un saldo mayor a cero y un usuario válido.";
+                return $this->redirect("/usuario/panel/{$_SESSION['usuario_id']}");
+            }
+
+            // Instanciar el modelo
+            $usuarioModel = new UsuarioModel();
+
+            // Transferir saldo
+            $resultado = $usuarioModel->transferirSaldo($_SESSION['usuario_id'], $nombreUsuarioDestino, $saldo);
+
+            if ($resultado === true) {
+                $_SESSION['mensaje'] = "Se ha transferido $saldo $ de saldo a $nombreUsuarioDestino con éxito.";
+            } else {
+                $_SESSION['mensaje'] = "Error al realizar la transferencia: " . $resultado;
+            }
+
+            // Redirigir al home
+            return $this->redirect('/main');
+        }
+
+        // Si no es POST, redirigir al home
+        return $this->redirect('/main');
     }
 
 

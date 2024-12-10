@@ -36,6 +36,8 @@ Route::get('/usuario/:id', [UsuarioController::class, 'mostrarPanel']);
 //Ruta para modificar los datos del usuario
 Route::post('/usuario/editar', [UsuarioController::class, 'actualizarUsuario']);
 
+//Ruta para poder enviar saldo a otro usuario
+Route::post('/usuario/enviar-saldo', [UsuarioController::class, 'enviarSaldo']);
 
 
 

@@ -153,4 +153,69 @@ class UsuarioModel extends Model
             throw new \Exception("Error al actualizar el usuario: " . $e->getMessage());
         }
     }
+
+
+    // Registrar un nuevo usuario
+    public function registrarUsuario($datos)
+    {
+        $sql = "INSERT INTO usuarios (nombre, apellidos, nombre_usuario, email, fecha_nacimiento, contrasena, saldo) 
+                VALUES (:nombre, :apellidos, :nombre_usuario, :email, :fecha_nacimiento, :contrasena, :saldo)";
+        $db = Database::getConnection();
+        $stmt = $db->prepare($sql);
+
+        $stmt->bindParam(':nombre', $datos['nombre']);
+        $stmt->bindParam(':apellidos', $datos['apellidos']);
+        $stmt->bindParam(':nombre_usuario', $datos['usuario']);
+        $stmt->bindParam(':email', $datos['email']);
+        $stmt->bindParam(':fecha_nacimiento', $datos['fecha_nacimiento']);
+        $stmt->bindParam(':contrasena', $datos['contrasena']);
+        $stmt->bindParam(':saldo', $datos['saldo']);
+
+        $stmt->execute();
+    }
+
+
+     // Transacción para transferir saldo entre usuarios
+     public function transferirSaldo($usuarioIdRemitente, $nombreUsuarioDestino, $saldo)
+     {
+         $db = Database::getConnection();
+         try {
+             $db->beginTransaction();
+ 
+             // Obtener el saldo del usuario remitente
+             $sql = "SELECT saldo FROM usuarios WHERE id = :id";
+             $stmt = $db->prepare($sql);
+             $stmt->bindParam(':id', $usuarioIdRemitente);
+             $stmt->execute();
+             $remitente = $stmt->fetch(\PDO::FETCH_ASSOC);
+ 
+             if (!$remitente || $remitente['saldo'] < $saldo) {
+                 throw new \Exception("Saldo insuficiente.");
+             }
+ 
+             // Restar saldo al usuario remitente
+             $sql = "UPDATE usuarios SET saldo = saldo - :saldo WHERE id = :id";
+             $stmt = $db->prepare($sql);
+             $stmt->bindParam(':saldo', $saldo);
+             $stmt->bindParam(':id', $usuarioIdRemitente);
+             $stmt->execute();
+ 
+             // Sumar saldo al usuario destinatario
+             $sql = "UPDATE usuarios SET saldo = saldo + :saldo WHERE nombre_usuario = :nombreUsuario";
+             $stmt = $db->prepare($sql);
+             $stmt->bindParam(':saldo', $saldo);
+             $stmt->bindParam(':nombreUsuario', $nombreUsuarioDestino);
+             $stmt->execute();
+ 
+             if ($stmt->rowCount() === 0) {
+                 throw new \Exception("El usuario destinatario no existe.");
+             }
+ 
+             $db->commit();
+             return true;
+         } catch (\Exception $e) {
+             $db->rollBack();
+             return $e->getMessage();
+         }
+     }
 }
