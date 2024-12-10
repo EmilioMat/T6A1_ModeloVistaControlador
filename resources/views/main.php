@@ -1,7 +1,3 @@
-<?php
-session_start();
-?>
-
 <main class="main">
     <?php
     // Verificar si hay un mensaje en la sesión

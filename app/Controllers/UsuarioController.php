@@ -168,14 +168,92 @@ class UsuarioController extends Controller
             // Ejecutar la consulta
             $stmt->execute();
 
-            // Mensaje de éxito
             $_SESSION['mensaje'] = "Usuario registrado correctamente.";
 
-            // Redirigir al listado de usuarios (o donde desees)
+            // Redirigir al listado de usuarios
             return $this->redirect('/main');
         } catch (\PDOException $e) {
-            // Manejar errores de la base de datos
             return $this->view('usuarios.registro', ['error' => 'Error al registrar el usuario: ' . $e->getMessage()]);
         }
+    }
+
+    public function mostrarPanel($id)
+    {
+        // Verificar si el usuario está autenticado
+        if (!isset($_SESSION['usuario_id'])) {
+            $_SESSION['mensaje'] = "Debe iniciar sesión para acceder a esta página.";
+            return $this->view('/login');
+        }
+
+        // Verificar que el ID de la URL coincide con el usuario autenticado
+        if ($_SESSION['usuario_id'] != $id) {
+            return $this->view('usuarios.panel', ['error' => 'No tiene permisos para acceder a este panel.']);
+        }
+
+        // Obtener los datos del usuario
+        $usuarioModel = new UsuarioModel();
+        $usuario = $usuarioModel->obtenerUsuarioPorId($id);
+
+        if (!$usuario) {
+            return $this->view('usuarios.panel', ['error' => 'El usuario no existe.']);
+        }
+
+        // Cargar la vista del panel con los datos del usuario
+        return $this->view('usuarios.panel', ['usuario' => $usuario]);
+    }
+
+    public function actualizarUsuario()
+    {
+        $usuarioId = $_SESSION['usuario_id'];
+       
+        // Comprobar si se ha enviado el formulario
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = $_POST["id"] ?? '';
+            $nombre = $_POST['nombre'] ?? '';
+            $apellidos = $_POST['apellidos'] ?? '';
+            $usuario = $_POST['usuario'] ?? '';
+            $email = $_POST['email'] ?? '';
+            $fecha_nacimiento = $_POST['fecha_nacimiento'] ?? '';
+
+            // Validaciones de campos
+            if (empty($nombre) || empty($apellidos) || empty($usuario) || empty($email) || empty($fecha_nacimiento)) {
+                return $this->view('usuarios.panel', [
+                    'errores' => ['general' => 'Por favor, completa todos los campos.'],
+                    'usuario' => $_POST
+                ]);
+            }
+
+            try {
+                // Instancia del modelo
+                $usuarioModel = new UsuarioModel();
+
+                // Llamar al método del modelo para actualizar los datos
+                $usuarioModel->updateUser($id, $nombre, $apellidos, $usuario, $email, $fecha_nacimiento);
+
+                $_SESSION['mensaje'] = "Datos actualizados correctamente.";
+                header('Location: /main');
+                exit();
+            } catch (\Exception $e) {
+                $_SESSION['mensaje'] = "Error al actualizar los datos: " . $e->getMessage();
+                return $this->view('usuarios.panel', [
+                    'errores' => ['general' => 'Error al procesar la solicitud: ' . $e->getMessage()],
+                    'usuario' => $_POST
+                ]);
+            }
+        }
+
+        // Si no es POST, mostrar el formulario de edición
+        return $this->view('usuario.panel');
+    }
+
+
+
+    public function logout()
+    {
+        session_destroy();
+
+        // Redirigir al usuario a la página principal
+        header("Location: /");
+        exit();
     }
 }

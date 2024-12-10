@@ -94,7 +94,7 @@ class UsuarioModel extends Model
             throw new \Exception("Error al consultar el usuario: " . $e->getMessage());
         }
     }
-    
+
     public function obtenerUsuarioPorEmail($email)
     {
         try {
@@ -107,6 +107,50 @@ class UsuarioModel extends Model
             return $stmt->fetch(\PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
             throw new \Exception("Error al consultar el correo electrónico: " . $e->getMessage());
+        }
+    }
+
+    public function obtenerUsuarioPorId($id)
+    {
+        try {
+            $db = Database::getConnection();
+            $sql = "SELECT * FROM usuarios WHERE id = :id";
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+
+            return $stmt->fetch(\PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            throw new \Exception("Error al consultar el usuario: " . $e->getMessage());
+        }
+    }
+
+    public function updateUser($id, $nombre, $apellidos, $nombre_usuario, $email, $fecha_nacimiento)
+    {
+        try {
+            // Obtención de la conexión a la base de datos
+            $db = Database::getConnection();
+
+            // Preparar la consulta SQL
+            $sql = "UPDATE usuarios 
+            SET nombre = :nombre, apellidos = :apellidos, nombre_usuario = :nombre_usuario, email = :email, fecha_nacimiento = :fecha_nacimiento 
+            WHERE id = :id";
+            $stmt = $db->prepare($sql);
+
+            // Vincular los parámetros
+            $stmt->bindParam(':id', $id);
+            $stmt->bindParam(':nombre', $nombre);
+            $stmt->bindParam(':apellidos', $apellidos);
+            $stmt->bindParam(':nombre_usuario', $nombre_usuario);
+            $stmt->bindParam(':email', $email);
+            $stmt->bindParam(':fecha_nacimiento', $fecha_nacimiento);
+
+            // Ejecutar la consulta
+            $stmt->execute();
+            return true;
+        } catch (\PDOException $e) {
+            // Si hay un error en la base de datos, lanzamos una excepción
+            throw new \Exception("Error al actualizar el usuario: " . $e->getMessage());
         }
     }
 }
