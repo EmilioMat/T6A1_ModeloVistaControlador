@@ -236,4 +236,37 @@ class UsuarioModel extends Model
         $stmt->execute();
         return $stmt->rowCount();
     }
+    public function getAllUsersWithPagination($page = 1, $perPage = 5)
+    {
+        try {
+            $db = Database::getConnection();
+
+            // Calculate offset
+            $offset = ($page - 1) * $perPage;
+
+            // Get paginated users
+            $stmt = $db->prepare("SELECT id, nombre, apellidos, nombre_usuario, email 
+                             FROM usuarios 
+                             ORDER BY id 
+                             LIMIT :limit OFFSET :offset");
+
+            $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+            $stmt->execute();
+            $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Get total count of users
+            $totalStmt = $db->query("SELECT COUNT(*) FROM usuarios");
+            $total = $totalStmt->fetchColumn();
+
+            return [
+                'users' => $users,
+                'total' => $total,
+                'totalPages' => ceil($total / $perPage),
+                'currentPage' => $page
+            ];
+        } catch (\PDOException $e) {
+            throw new \Exception("Error al obtener usuarios: " . $e->getMessage());
+        }
+    }
 }

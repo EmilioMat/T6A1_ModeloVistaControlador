@@ -170,9 +170,9 @@ class UsuarioController extends Controller
 
     public function mostrarPanel($id)
     {
-
-        if ($id == $_SESSION['usuario_id']) {
-            // Verificar si el usuario está autenticado
+if (isset($_SESSION['usuario_id'])) {
+    if ($id == $_SESSION['usuario_id']) {
+        // Verificar si el usuario está autenticado
         if (!isset($_SESSION['usuario_id'])) {
             $_SESSION['mensaje'] = "Debe iniciar sesión para acceder a esta página.";
             return $this->view('/login');
@@ -193,9 +193,15 @@ class UsuarioController extends Controller
 
         // Cargar la vista del panel con los datos del usuario
         return $this->view('usuarios.panel', ['usuario' => $usuario]);
-        }else{
-            return $this->view('home',  $_SESSION['mensaje'] = "No tienes acceso para acceder a este usuario");
-        }
+    } else {
+        return $this->view('home',  $_SESSION['mensaje'] = "No tienes acceso para acceder a este usuario");
+    }
+    
+} else {
+    return $this->view('home',  $_SESSION['mensaje'] = "No tienes acceso para acceder a este usuario");
+}
+
+    
     }
 
     public function actualizarUsuario()
@@ -283,9 +289,22 @@ class UsuarioController extends Controller
     public function listarUsuarios()
     {
         try {
+            // Get current page from URL parameter, default to 1 if not set
+            $currentPage = isset($_GET['p']) ? (int)$_GET['p'] : 1;
+
+            // Ensure page is at least 1
+            if ($currentPage < 1) {
+                $currentPage = 1;
+            }
+
             $usuarioModel = new UsuarioModel();
-            $usuarios = $usuarioModel->getAllUsers();
-            return $this->view('usuarios.lista', ['usuarios' => $usuarios]);
+            $result = $usuarioModel->getAllUsersWithPagination($currentPage, 5);
+
+            return $this->view('usuarios.lista', [
+                'usuarios' => $result['users'],
+                'totalPages' => $result['totalPages'],
+                'currentPage' => $result['currentPage']
+            ]);
         } catch (\Exception $e) {
             die("Error al cargar la lista de usuarios: " . $e->getMessage());
         }
