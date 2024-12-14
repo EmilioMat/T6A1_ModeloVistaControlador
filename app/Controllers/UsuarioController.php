@@ -74,8 +74,8 @@ class UsuarioController extends Controller
                     if ($usuarioDB && password_verify($contrasena, $usuarioDB['contrasena'])) {
                         // Iniciar sesión
                         $_SESSION['usuario_id'] = $usuarioDB['id'];
-                        $_SESSION['user'] = $usuarioDB['user'];
-                        $_SESSION['mensaje'] = "Bienvenido, " . $_SESSION['user'];
+                        $_SESSION['nombre_usuario'] = $usuarioDB['nombre_usuario'];
+                        $_SESSION['mensaje'] = "Bienvenido, " . $_SESSION['nombre_usuario'];
                         header('Location: /main');
                         exit();
                     } else {
@@ -114,6 +114,7 @@ class UsuarioController extends Controller
             'nombre_usuario' => '',
             'email' => '',
             'fecha_nacimiento' => '',
+            'saldo' => '',
             'errores' => $errores,
         ];
 
@@ -125,9 +126,10 @@ class UsuarioController extends Controller
             $email = isset($_POST['email']) ? trim($_POST['email']) : '';
             $contrasena = isset($_POST['contrasena']) ? trim($_POST['contrasena']) : '';
             $fecha_nacimiento = isset($_POST['fecha_nacimiento']) ? trim($_POST['fecha_nacimiento']) : '';
+            $saldo = isset($_POST['saldo']) ? trim($_POST['saldo']) : '';
 
 
-            if (empty($nombre) || empty($apellidos) || empty($nombre_usuario) || empty($email) || empty($contrasena) || empty($fecha_nacimiento)) {
+            if (empty($nombre) || empty($apellidos) || empty($nombre_usuario) || empty($email) || empty($contrasena) || empty($fecha_nacimiento) || empty($saldo)) {
                 $errores['nombre'] = 'Por vafor complete todos los campos';
             } else {
                 if (strlen($nombre) < 3 || strlen($nombre) > 20) {
@@ -142,11 +144,14 @@ class UsuarioController extends Controller
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                     $errores['email'] = 'Debe proporcionar un correo electrónico válido.';
                 }
-                if (!preg_match('/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{5,}$/', $contrasena)) {
-                    $errores['contrasena'] = 'La contraseña debe tener al menos 5 caracteres, incluir letras, números y caracteres especiales.';
+                if (!preg_match('/^\d+$/', $contrasena)) {
+                    $errores['contrasena'] = 'La contraseña solo puede tener números.';
                 }
                 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha_nacimiento)) {
                     $errores['fecha_nacimiento'] = 'Debe proporcionar una fecha válida.';
+                }
+                if (!preg_match('/^[1-9][0-9]*$/', $saldo)) {
+                    $errores['saldo'] = 'El saldo debe ser un número entero positivo';
                 }
             }
             // Verificar si no hay errores
@@ -172,6 +177,7 @@ class UsuarioController extends Controller
                             'email' => $email,
                             'contrasena' => password_hash($contrasena, PASSWORD_DEFAULT),
                             'fecha_nacimiento' => $fecha_nacimiento,
+                            'saldo' => $saldo,
                         ];
                         $usuarioModel->registrarUsuario($datosUsuario);
 
@@ -190,6 +196,7 @@ class UsuarioController extends Controller
                 'nombre_usuario' => $nombre_usuario,
                 'email' => $email,
                 'fecha_nacimiento' => $fecha_nacimiento,
+                'saldo' => $saldo,
                 'errores' => $errores,
             ];
         }
@@ -238,46 +245,70 @@ class UsuarioController extends Controller
     */
     public function actualizarUsuario()
     {
+        $error = [];
         $usuarioId = $_SESSION['usuario_id'];
 
         // Comprobar si se ha enviado el formulario
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $id = $_POST["id"] ?? '';
             $nombre = $_POST['nombre'] ?? '';
             $apellidos = $_POST['apellidos'] ?? '';
             $nombre_usuario = $_POST['nombre_usuario'] ?? '';
             $email = $_POST['email'] ?? '';
             $fecha_nacimiento = $_POST['fecha_nacimiento'] ?? '';
+            $saldo = $_POST['saldo'] ?? '';
 
-            // Validaciones de campos
-            if (empty($nombre) || empty($apellidos) || empty($nombre_usuario) || empty($email) || empty($fecha_nacimiento)) {
-                return $this->view('usuarios.panel', [
-                    'errores' => ['general' => 'Por favor, completa todos los campos.'],
-                    'usuario' => $_POST
-                ]);
+            if (empty($nombre) || empty($apellidos) || empty($nombre_usuario) || empty($email)  || empty($fecha_nacimiento) || empty($saldo)) {
+                $error['nombre'] = 'Por vafor complete todos los campos';
+            } else {
+                if (strlen($nombre) < 3 || strlen($nombre) > 20) {
+                    $error['nombre'] = 'El nombre es obligatorio y debe tener entre 3 y 20 caracteres.';
+                }
+                if (strlen($apellidos) > 20) {
+                    $error['apellidos'] = 'Los apellidos no pueden tener mas de 20 caracteres';
+                }
+                if (strlen($nombre_usuario) > 20) {
+                    $error['nombre_usuario'] = 'Los apellidos no pueden tener mas de 20 caracteres';
+                }
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $error['email'] = 'Debe proporcionar un correo electrónico válido.';
+                }
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha_nacimiento)) {
+                    $error['fecha_nacimiento'] = 'Debe proporcionar una fecha válida.';
+                }
+                if (!preg_match('/^\d+$/', $saldo)) {
+                    $error['saldo'] = 'Debe proporcionar un saldo válido.';
+                }
             }
 
-            try {
-                $usuarioModel = new UsuarioModel();
+            // Si hay errores, regresar a la vista con los mensajes
+            if (!empty($error)) {
+                return $this->view('usuarios.panel', ['error' => $error, 'usuario' => $_POST]);
+            } else {
+                try {
+                    // Instancia del modelo
+                    $usuarioModel = new UsuarioModel();
 
-                // Llamamos al método del modelo para actualizar los datos
-                $usuarioModel->updateUser($id, $nombre, $apellidos, $nombre_usuario, $email, $fecha_nacimiento);
+                    // Llamar al método del modelo para actualizar los datos
+                    $usuarioModel->updateUser($usuarioId, $nombre, $apellidos, $nombre_usuario, $email, $fecha_nacimiento, $saldo);
 
-                $_SESSION['mensaje'] = "Datos actualizados correctamente.";
-                header('Location: /main');
-                exit();
-            } catch (\Exception $e) {
-                $_SESSION['mensaje'] = "Error al actualizar los datos: " . $e->getMessage();
-                return $this->view('usuarios.panel', [
-                    'errores' => ['general' => 'Error al procesar la solicitud: ' . $e->getMessage()],
-                    'usuario' => $_POST
-                ]);
+                    $_SESSION['mensaje'] = "Datos actualizados correctamente.";
+                    header('Location: /');
+                    exit();
+                } catch (\Exception $e) {
+                    $_SESSION['mensaje'] = "Error al actualizar los datos: " . $e->getMessage();
+                    return $this->view('usuarios.panel', [
+                        'error' => ['general' => 'Error al procesar la solicitud: ' . $e->getMessage()],
+                        'usuario' => $_POST
+                    ]);
+                }
             }
         }
 
         // Si no es POST, mostrar el formulario de edición
         return $this->view('usuarios.panel');
     }
+
 
 
     /*
@@ -370,7 +401,7 @@ class UsuarioController extends Controller
     * Metodo --> Que nos permite editar los campos de un usuario
     *
     */
-    public function editarUsuario()
+    public function editarUsuario($id)
     {
         $id = $_GET['id'] ?? null;
 

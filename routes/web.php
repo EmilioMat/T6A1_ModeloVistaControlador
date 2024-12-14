@@ -33,15 +33,18 @@ Route::post('/registro', [UsuarioController::class, 'verificarRegistro']);
 // Ruta para ver el panel de usuario
 Route::get('/usuario/:id', [UsuarioController::class, 'mostrarPanel']);
 
-//Ruta para modificar los datos del usuario
-Route::post('/usuario/editar', [UsuarioController::class, 'actualizarUsuario']);
 
-//Ruta para poder enviar saldo a otro usuario
+
+// Ruta para poder enviar saldo a otro usuario
 Route::post('/usuario/enviar-saldo', [UsuarioController::class, 'enviarSaldo']);
 
 Route::get('/usuarios', [UsuarioController::class, 'listarUsuarios']);
 Route::get('/usuarios/editar', [UsuarioController::class, 'editarUsuario']);
 Route::post('/usuarios/eliminar', [UsuarioController::class, 'eliminarUsuario']);
+
+//Ruta para modificar los datos del usuario
+Route::post('/usuario/editar', [UsuarioController::class, 'actualizarUsuario']);
+
 
 // Ruta para cerrar sesión
 Route::get('/logout', [UsuarioController::class, 'logout']);

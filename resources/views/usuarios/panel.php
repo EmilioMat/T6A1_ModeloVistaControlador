@@ -11,11 +11,12 @@
     <main class="main">
         <form method="POST" action="/usuario/editar" class="formulario">
             <h2>Editar Datos</h2>
+            <input type="hidden" name="usuarioId" value="<?= htmlspecialchars($usuario['usuario_id']) ?>">
 
             <!-- Mostrar errores globales -->
-            <?php if (!empty($data['errores'])): ?>
+            <?php if (!empty($data['error'])): ?>
                 <ul style="color: red;">
-                    <?php foreach ($data['errores'] as $campo => $mensaje): ?>
+                    <?php foreach ($data['error'] as $campo => $mensaje): ?>
                         <li><?= htmlspecialchars($mensaje); ?></li>
                     <?php endforeach; ?>
                 </ul>
@@ -35,6 +36,9 @@
 
             <label for="fecha_nacimiento">Fecha de Nacimiento:</label>
             <input type="date" name="fecha_nacimiento" id="fecha_nacimiento">
+
+            <label for="saldo">Saldo:</label>
+            <input type="text" name="saldo" id="saldo">
 
             <button type="submit" class="btn-enviar">Actualizar Datos</button>
         </form>

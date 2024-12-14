@@ -184,16 +184,15 @@ class UsuarioModel extends Model
     * Metodo --> para poder actualizar los datos de un usuario
     *
     */
-    public function updateUser($id, $nombre, $apellidos, $nombre_usuario, $email, $fecha_nacimiento)
+    public function updateUser($id, $nombre, $apellidos, $nombre_usuario, $email, $fecha_nacimiento, $saldo)
     {
         try {
             // Obtención de la conexión a la base de datos
             $db = Database::getConnection();
 
-            // Preparar la consulta SQL
             $sql = "UPDATE usuarios 
-            SET nombre = :nombre, apellidos = :apellidos, nombre_usuario = :nombre_usuario, email = :email, fecha_nacimiento = :fecha_nacimiento 
-            WHERE id = :id";
+        SET nombre = :nombre, apellidos = :apellidos, nombre_usuario = :nombre_usuario, email = :email, fecha_nacimiento = :fecha_nacimiento, saldo = :saldo 
+        WHERE id = :id";
             $stmt = $db->prepare($sql);
 
             // Vincular los parámetros
@@ -203,6 +202,7 @@ class UsuarioModel extends Model
             $stmt->bindParam(':nombre_usuario', $nombre_usuario);
             $stmt->bindParam(':email', $email);
             $stmt->bindParam(':fecha_nacimiento', $fecha_nacimiento);
+            $stmt->bindParam(':saldo', $saldo);
 
             // Ejecutar la consulta
             $stmt->execute();
@@ -228,7 +228,7 @@ class UsuarioModel extends Model
 
         $stmt->bindParam(':nombre', $datos['nombre']);
         $stmt->bindParam(':apellidos', $datos['apellidos']);
-        $stmt->bindParam(':nombre_usuario', $datos['usuario']);
+        $stmt->bindParam(':nombre_usuario', $datos['nombre_usuario']);
         $stmt->bindParam(':email', $datos['email']);
         $stmt->bindParam(':fecha_nacimiento', $datos['fecha_nacimiento']);
         $stmt->bindParam(':contrasena', $datos['contrasena']);
@@ -392,7 +392,7 @@ class UsuarioModel extends Model
                 'users' => $users,
                 'total' => $total,
                 'totalPages' => ceil($total / $perPage),  // Calcular el numero total de paginas
-                'currentPage' => $page 
+                'currentPage' => $page
             ];
         } catch (\PDOException $e) {
             throw new \Exception("Error al obtener usuarios: " . $e->getMessage());
