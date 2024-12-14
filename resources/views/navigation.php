@@ -11,8 +11,7 @@
             <p class="nav__text">Panel</p>
         </a>
 
-        <!-- Enlace para cerrar sesión -->
-        <a href="/lista" class="nav__link">
+        <a href="/usuarios?p=1" class="nav__link">
             <p class="nav__text">Listado de Usuarios</p>
         </a>
 

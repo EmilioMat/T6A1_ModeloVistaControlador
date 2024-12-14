@@ -7,203 +7,235 @@ use App\Database\Database;
 
 class UsuarioController extends Controller
 {
-    public function index()
-    {
-        // Crear la conexión y acceder al modelo
-        $usuarioModel = new UsuarioModel();
-        $usuarios = $usuarioModel->consultaPrueba();
-
-        // Pasar los usuarios a la vista
-        return $this->view('usuarios.index', ['usuarios' => $usuarios]);
-    }
-
-    public function create()
-    {
-        return $this->view('usuarios.create');
-    }
-
-    public function store()
-    {
-        // Recoger los datos enviados por el formulario
-        $usuarioModel = new UsuarioModel();
-        var_dump($_POST); // Debug
-        echo "Datos enviados desde POST.";
-
-        // Redirigir después de procesar los datos
-        // return $this->redirect('/usuarios');
-    }
-
-    public function show($id)
-    {
-        echo "Mostrar usuario con ID: {$id}";
-    }
-
-    public function edit($id)
-    {
-        echo "Editar usuario";
-    }
-
-    public function update($id)
-    {
-        echo "Actualizar usuario";
-    }
-
-    public function destroy($id)
-    {
-        echo "Borrar usuario";
-    }
-
-    // Ejemplo de consulta con SQL Query Builder
-    public function pruebasSQLQueryBuilder()
-    {
-        $usuarioModel = new UsuarioModel();
-        // Ejemplo de consultas SQL comentadas
-        // $usuarioModel->all();
-        // $usuarioModel->select('columna1', 'columna2')->get();
-        echo "Pruebas SQL Query Builder";
-    }
-
-    // Crear base de datos y poblarla con datos de prueba
+    /*
+    *
+    * Metodo --> Para crear la base de datos
+    *
+    */
     public function crearBaseDeDatos(): void
     {
         $usuarioModel = new UsuarioModel();
+
+        if ($usuarioModel->baseDeDatosExistente()) {
+            session_start();
+            $_SESSION['mensaje'] = 'La base de datos ya estaba creada.';
+            header('Location: /');
+            exit();
+        }
+
         $usuarioModel->crearTablasUsuarios();
         echo "Base de datos creada y poblada con datos de prueba.";
     }
 
-    // Método para mostrar el formulario de login
+    /*
+    *
+    * Metodo --> Para mostrar el formulario del login
+    *
+    */
     public function login()
     {
         return $this->view("usuarios.login");
     }
 
-    // Verificar el login y redirigir
+    /*
+    *
+    * Metodo --> Que verifica el login sea correcto
+    *
+    */
     public function verificarLogin()
     {
-
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $usuario = $_POST['usuario'] ?? null;
-            $contrasena = $_POST['contraseña'] ?? null;
+            $usuario = trim($_POST['usuario'] ?? '');
+            $contrasena = trim($_POST['contraseña'] ?? '');
+
+            // Validaciones de los campos
+            $errores = [];
 
             if (empty($usuario) || empty($contrasena)) {
-                return $this->view('usuarios.login', ['error' => 'Por favor, completa todos los campos.']);
+                $errores['usuario'] = 'Por vafor complete todos los campos';
+            } else {
+                if (strlen($usuario) < 3 || strlen($usuario) > 20) {
+                    $errores['usuario'] = 'El nombre es obligatorio y debe tener entre 3 y 20 caracteres.';
+                }
+                if (!preg_match('/^\d{6,}$/', $contrasena)) {
+                    $errores['contrasena'] = 'La contraseña debe tener al menos 6 números y no puede contener letras ni caracteres especiales.';
+                }
             }
 
-            try {
-                $usuarioModel = new UsuarioModel();
-                $usuarioDB = $usuarioModel->obtenerUsuarioPorNombre($usuario);
+            // Si hay errores, regresar a la vista con los mensajes
+            if (!empty($errores)) {
+                return $this->view('usuarios.login', ['errores' => $errores]);
+            } else {
+                // Verificación con la base de datos
+                try {
+                    $usuarioModel = new UsuarioModel();
+                    $usuarioDB = $usuarioModel->obtenerUsuarioPorNombre($usuario);
 
-                if ($usuarioDB && password_verify($contrasena, $usuarioDB['contrasena'])) {
-                    $_SESSION['usuario_id'] = $usuarioDB['id'];
-                    $_SESSION['nombre_usuario'] = $usuarioDB['nombre_usuario'];
-                    $_SESSION['mensaje'] = "Bienvenido, " . $_SESSION['nombre_usuario'];
-                    header('Location: /main');
-                    exit();
-                } else {
-                    return $this->view('usuarios.login', ['error' => 'Usuario o contraseña incorrectos.']);
+                    if ($usuarioDB && password_verify($contrasena, $usuarioDB['contrasena'])) {
+                        // Iniciar sesión
+                        $_SESSION['usuario_id'] = $usuarioDB['id'];
+                        $_SESSION['user'] = $usuarioDB['user'];
+                        $_SESSION['mensaje'] = "Bienvenido, " . $_SESSION['user'];
+                        header('Location: /main');
+                        exit();
+                    } else {
+                        return $this->view('usuarios.login', ['errores' => ['general' => 'Usuario o contraseña incorrectos.']]);
+                    }
+                } catch (\Exception $e) {
+                    return $this->view('usuarios.login', ['errores' => ['general' => 'Error al procesar la solicitud: ' . $e->getMessage()]]);
                 }
-            } catch (\Exception $e) {
-                return $this->view('usuarios.login', ['error' => 'Error al procesar la solicitud: ' . $e->getMessage()]);
             }
         }
 
         return $this->view('usuarios.login');
     }
 
-    // Mostrar formulario de registro
+    /*
+    *
+    * Metodo --> Para mostrar el panel de registro de usuario
+    *
+    */
     public function mostrarRegistro()
     {
         return $this->view('usuarios.registro');
     }
 
+    /*
+    *
+    * Metodo --> Que verifica que el registro sea correcto
+    *
+    */
     public function verificarRegistro()
     {
-        // Obtener los datos del formulario
-        $nombre = $_POST['nombre'];
-        $apellidos = $_POST['apellidos'];
-        $usuario = $_POST['usuario'];
-        $email = $_POST['email'];
-        $fecha_nacimiento = $_POST['fecha_nacimiento'];
-        $contraseña = $_POST['contraseña'];
-        $saldo = $_POST['saldo'];
+        $errores = []; // Array para almacenar los errores
+        $data = [
+            'nombre' => '',
+            'apellidos' => '',
+            'nombre_usuario' => '',
+            'email' => '',
+            'fecha_nacimiento' => '',
+            'errores' => $errores,
+        ];
 
-        // Instanciar el modelo de usuario
-        $usuarioModel = new UsuarioModel();
+        // Validación al enviar el formulario
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $nombre = isset($_POST['nombre']) ? trim($_POST['nombre']) : '';
+            $apellidos = isset($_POST['apellidos']) ? trim($_POST['apellidos']) : '';
+            $nombre_usuario = isset($_POST['nombre_usuario']) ? trim($_POST['nombre_usuario']) : '';
+            $email = isset($_POST['email']) ? trim($_POST['email']) : '';
+            $contrasena = isset($_POST['contrasena']) ? trim($_POST['contrasena']) : '';
+            $fecha_nacimiento = isset($_POST['fecha_nacimiento']) ? trim($_POST['fecha_nacimiento']) : '';
 
-        // Verificar si el nombre de usuario ya está registrado
-        $usuarioExistente = $usuarioModel->obtenerUsuarioPorNombre($usuario);
-        if ($usuarioExistente) {
-            return $this->view('usuarios.registro', ['error' => 'El nombre de usuario ya está registrado.']);
-        }
 
-        // Verificar si el correo electrónico ya está registrado
-        $emailExistente = $usuarioModel->obtenerUsuarioPorEmail($email);
-        if ($emailExistente) {
-            return $this->view('usuarios.registro', ['error' => 'El correo electrónico ya está registrado.']);
-        }
+            if (empty($nombre) || empty($apellidos) || empty($nombre_usuario) || empty($email) || empty($contrasena) || empty($fecha_nacimiento)) {
+                $errores['nombre'] = 'Por vafor complete todos los campos';
+            } else {
+                if (strlen($nombre) < 3 || strlen($nombre) > 20) {
+                    $errores['nombre'] = 'El nombre es obligatorio y debe tener entre 3 y 20 caracteres.';
+                }
+                if (strlen($apellidos) > 20) {
+                    $errores['apellidos'] = 'Los apellidos no pueden tener mas de 20 caracteres';
+                }
+                if (strlen($nombre_usuario) > 20) {
+                    $errores['nombre_usuario'] = 'El nombre_usuario no pueden tener mas de 20 caracteres';
+                }
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $errores['email'] = 'Debe proporcionar un correo electrónico válido.';
+                }
+                if (!preg_match('/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{5,}$/', $contrasena)) {
+                    $errores['contrasena'] = 'La contraseña debe tener al menos 5 caracteres, incluir letras, números y caracteres especiales.';
+                }
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha_nacimiento)) {
+                    $errores['fecha_nacimiento'] = 'Debe proporcionar una fecha válida.';
+                }
+            }
+            // Verificar si no hay errores
+            if (empty($errores)) {
+                $usuarioModel = new UsuarioModel();
 
-        // Crear el hash de la contraseña
-        $contraseñaHash = password_hash($contraseña, PASSWORD_DEFAULT);
+                // Verificar si el usuario ya existe
+                if ($usuarioModel->obtenerUsuarioPorNombre($nombre_usuario)) {
+                    $errores['nombre_usuario'] = 'El nombre de usuario ya está registrado.';
+                }
 
-        // registrar el nuevo usuario
-        try {
-            $datosUsuario = [
+                if ($usuarioModel->obtenerUsuarioPorEmail($email)) {
+                    $errores['email'] = 'El correo electrónico ya está registrado.';
+                }
+
+                // Si todo está bien, registramos al usuario
+                if (empty($errores)) {
+                    try {
+                        $datosUsuario = [
+                            'nombre' => $nombre,
+                            'apellidos' => $apellidos,
+                            'nombre_usuario' => $nombre_usuario,
+                            'email' => $email,
+                            'contrasena' => password_hash($contrasena, PASSWORD_DEFAULT),
+                            'fecha_nacimiento' => $fecha_nacimiento,
+                        ];
+                        $usuarioModel->registrarUsuario($datosUsuario);
+
+                        $_SESSION['mensaje'] = 'Usuario registrado correctamente.';
+                        return $this->redirect('/main');
+                    } catch (\PDOException $e) {
+                        $errores['general'] = 'Error al registrar el usuario: ' . $e->getMessage();
+                    }
+                }
+            }
+
+            // Enviamos los datos y errores al formulario
+            $data = [
                 'nombre' => $nombre,
                 'apellidos' => $apellidos,
-                'usuario' => $usuario,
+                'nombre_usuario' => $nombre_usuario,
                 'email' => $email,
                 'fecha_nacimiento' => $fecha_nacimiento,
-                'contrasena' => $contraseñaHash,
-                'saldo' => $saldo
+                'errores' => $errores,
             ];
-
-            $usuarioModel->registrarUsuario($datosUsuario);
-
-            $_SESSION['mensaje'] = "Usuario registrado correctamente.";
-
-            // Redirigir al dado de usuarios
-            return $this->redirect('/main');
-        } catch (\PDOException $e) {
-            return $this->view('usuarios.registro', ['error' => 'Error al registrar el usuario: ' . $e->getMessage()]);
         }
+
+        // Cargamos la vista con los datos y errores
+        return $this->view('usuarios.registro', $data);
     }
 
     public function mostrarPanel($id)
     {
-if (isset($_SESSION['usuario_id'])) {
-    if ($id == $_SESSION['usuario_id']) {
-        // Verificar si el usuario está autenticado
-        if (!isset($_SESSION['usuario_id'])) {
-            $_SESSION['mensaje'] = "Debe iniciar sesión para acceder a esta página.";
-            return $this->view('/login');
+        if (isset($_SESSION['usuario_id'])) {
+            if ($id == $_SESSION['usuario_id']) {
+                // Verificar si el usuario está autenticado
+                if (!isset($_SESSION['usuario_id'])) {
+                    $_SESSION['mensaje'] = "Debe iniciar sesión para acceder a esta página.";
+                    return $this->view('/login');
+                }
+
+                // Verificar que el ID de la URL coincide con el usuario autenticado
+                if ($_SESSION['usuario_id'] != $id) {
+                    return $this->view('usuarios.panel', ['error' => 'No tiene permisos para acceder a este panel.']);
+                }
+
+                // Obtener los datos del usuario
+                $usuarioModel = new UsuarioModel();
+                $usuario = $usuarioModel->obtenerUsuarioPorId($id);
+
+                if (!$usuario) {
+                    return $this->view('usuarios.panel', ['error' => 'El usuario no existe.']);
+                }
+
+                // Cargamos la vista del panel con los datos del usuario
+                return $this->view('usuarios.panel', ['usuario' => $usuario]);
+            } else {
+                return $this->view('home',  $_SESSION['mensaje'] = "No tienes acceso para acceder a este usuario");
+            }
+        } else {
+            return $this->view('home',  $_SESSION['mensaje'] = "No tienes acceso para acceder a este usuario");
         }
-
-        // Verificar que el ID de la URL coincide con el usuario autenticado
-        if ($_SESSION['usuario_id'] != $id) {
-            return $this->view('usuarios.panel', ['error' => 'No tiene permisos para acceder a este panel.']);
-        }
-
-        // Obtener los datos del usuario
-        $usuarioModel = new UsuarioModel();
-        $usuario = $usuarioModel->obtenerUsuarioPorId($id);
-
-        if (!$usuario) {
-            return $this->view('usuarios.panel', ['error' => 'El usuario no existe.']);
-        }
-
-        // Cargar la vista del panel con los datos del usuario
-        return $this->view('usuarios.panel', ['usuario' => $usuario]);
-    } else {
-        return $this->view('home',  $_SESSION['mensaje'] = "No tienes acceso para acceder a este usuario");
-    }
-    
-} else {
-    return $this->view('home',  $_SESSION['mensaje'] = "No tienes acceso para acceder a este usuario");
-}
-
-    
     }
 
+    /*
+    *
+    * Metodo --> Que nos permite actualizar los campos de un usuario mediante su formulario
+    *
+    */
     public function actualizarUsuario()
     {
         $usuarioId = $_SESSION['usuario_id'];
@@ -226,10 +258,9 @@ if (isset($_SESSION['usuario_id'])) {
             }
 
             try {
-                // Instancia del modelo
                 $usuarioModel = new UsuarioModel();
 
-                // Llamar al método del modelo para actualizar los datos
+                // Llamamos al método del modelo para actualizar los datos
                 $usuarioModel->updateUser($id, $nombre, $apellidos, $nombre_usuario, $email, $fecha_nacimiento);
 
                 $_SESSION['mensaje'] = "Datos actualizados correctamente.";
@@ -248,68 +279,97 @@ if (isset($_SESSION['usuario_id'])) {
         return $this->view('usuarios.panel');
     }
 
+
+    /*
+    *
+    * Metodo --> Que nos permite enviar saldo a otro usuario sabiendo su nombre
+    *
+    */
     public function enviarSaldo()
     {
+        // Verifico si el usuario ha iniciado sesión
         if (!isset($_SESSION['usuario_id'])) {
             $_SESSION['mensaje'] = "Debe iniciar sesión para enviar saldo.";
             return $this->redirect('/login');
         }
 
-        // Comprobar si se ha enviado el formulario
+        // Verifico si se ha enviado el formulario
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nombreUsuarioDestino = $_POST['usuarioDestino'] ?? '';
             $saldo = $_POST['saldo'] ?? 0;
 
-            // Validar datos
-            if (empty($nombreUsuarioDestino) || $saldo <= 0) {
+            // Validacion de los datos
+            if (empty($nombreUsuarioDestino) || empty($saldo) || $saldo <= 0) {
                 $_SESSION['mensaje'] = "Por favor, ingresa un saldo mayor a cero y un usuario válido.";
-                return $this->redirect("/usuario/panel/{$_SESSION['usuario_id']}");
+                return $this->redirect("/usuario/{$_SESSION['usuario_id']}");
             }
 
-            // Instanciar el modelo
             $usuarioModel = new UsuarioModel();
+
+            // Comprobar si el usuario destino existe en la base de datos
+            $usuarioDestinoExistente = $usuarioModel->obtenerUsuarioPorNombre($nombreUsuarioDestino);
+
+            if (!$usuarioDestinoExistente) {
+                $_SESSION['mensaje'] = "El usuario destinatario no existe.";
+                return $this->redirect("/usuario/{$_SESSION['usuario_id']}");
+            }
 
             // Transferir saldo
             $resultado = $usuarioModel->transferirSaldo($_SESSION['usuario_id'], $nombreUsuarioDestino, $saldo);
 
             if ($resultado === true) {
-                $_SESSION['mensaje'] = "Se ha transferido $saldo $ de saldo a $nombreUsuarioDestino con éxito.";
+                $_SESSION['mensaje'] = "Se ha transferido $saldo $ a $nombreUsuarioDestino con éxito.";
             } else {
                 $_SESSION['mensaje'] = "Error al realizar la transferencia: " . $resultado;
             }
 
-            // Redirigir al home
-            return $this->redirect('/main');
+            return $this->redirect('/');
         }
 
-        // Si no es POST, redirigir al home
-        return $this->redirect('/main');
+        // Si no es un POST, redirigir al home
+        return $this->redirect('/');
     }
 
+    /*
+    *
+    * Metodo --> Que nos pemite listar los datos con una paginacion incluida de 5 en 5
+    *
+    */
     public function listarUsuarios()
     {
         try {
-            // Get current page from URL parameter, default to 1 if not set
             $currentPage = isset($_GET['p']) ? (int)$_GET['p'] : 1;
+            if ($currentPage < 1) $currentPage = 1;
 
-            // Ensure page is at least 1
-            if ($currentPage < 1) {
-                $currentPage = 1;
-            }
+            $filters = array_filter([
+                'nombre' => $_GET['nombre'] ?? null,
+                'apellidos' => $_GET['apellidos'] ?? null,
+                'nombre_usuario' => $_GET['nombre_usuario'] ?? null,
+                'email' => $_GET['email'] ?? null,
+                'fecha_nacimiento' => $_GET['fecha_nacimiento'] ?? null,
+                'saldo_min' => $_GET['saldo_min'] ?? null,
+                'saldo_max' => $_GET['saldo_max'] ?? null,
+            ]);
 
             $usuarioModel = new UsuarioModel();
-            $result = $usuarioModel->getAllUsersWithPagination($currentPage, 5);
+            $result = $usuarioModel->getAllUsersWithPagination($currentPage, 5, $filters);
 
             return $this->view('usuarios.lista', [
                 'usuarios' => $result['users'],
                 'totalPages' => $result['totalPages'],
-                'currentPage' => $result['currentPage']
+                'currentPage' => $result['currentPage'],
+                'filters' => $filters,
             ]);
         } catch (\Exception $e) {
             die("Error al cargar la lista de usuarios: " . $e->getMessage());
         }
     }
 
+    /*
+    *
+    * Metodo --> Que nos permite editar los campos de un usuario
+    *
+    */
     public function editarUsuario()
     {
         $id = $_GET['id'] ?? null;
@@ -332,6 +392,11 @@ if (isset($_SESSION['usuario_id'])) {
         }
     }
 
+    /*
+    *
+    * Metodo --> Que nos permite eliminar un usuario de la base de datos
+    *
+    */
     public function eliminarUsuario()
     {
         $id = $_POST['id'] ?? null;
@@ -351,12 +416,15 @@ if (isset($_SESSION['usuario_id'])) {
         }
     }
 
-
+    /*
+    *
+    * Metodo --> Que nos permite cerrar sesion
+    *
+    */
     public function logout()
     {
         session_destroy();
 
-        // Redirigir al usuario a la página principal
         header("Location: /");
         exit();
     }

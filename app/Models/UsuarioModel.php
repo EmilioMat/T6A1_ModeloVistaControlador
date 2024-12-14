@@ -8,10 +8,14 @@ class UsuarioModel extends Model
 {
     protected $table = 'usuarios'; // Nombre de la tabla principal
 
-    // Metodo para crear la tabla de usuarios si no existe
+    /*
+    *
+    * Metodo --> para crear la tabla de usuarios si no existe
+    *
+    */
     public function definirTabla(): void
     {
-        // Definir las columnas de la tabla
+        // definimos las columnas de la tabla
         $columns = [
             'id' => 'INT AUTO_INCREMENT PRIMARY KEY',
             'nombre' => 'VARCHAR(50) NOT NULL',
@@ -23,11 +27,14 @@ class UsuarioModel extends Model
             'saldo' => 'DECIMAL(10, 2) DEFAULT 0.00',
         ];
 
-        // Crear la tabla utilizando el método del padre
         $this->createTable($columns);
     }
 
-    // Metodo para insertar datos de prueba
+    /*
+    *
+    * Metodo --> para insertar datos de prueba
+    *
+    */
     public function insertarDatosPrueba(int $cantidad = 100): void
     {
         $db = Database::getConnection();
@@ -39,16 +46,28 @@ class UsuarioModel extends Model
             $nombre_usuario = 'user_' . $i;
             $email = 'usuario_' . $i . '@ejemplo.com';
 
-            // Generar fecha de nacimiento aleatoria
+            // Compruebo si el email ya existe en la base de datos
+            $checkEmailQuery = "SELECT COUNT(*) FROM {$this->table} WHERE email = :email";
+            $stmt = $db->prepare($checkEmailQuery);
+            $stmt->bindParam(':email', $email);
+            $stmt->execute();
+            $count = $stmt->fetchColumn();
+
+            // Si el email ya existe, continuar con el siguiente
+            if ($count > 0) {
+                continue;
+            }
+
+            // Generaro fecha de nacimiento aleatoria
             $fecha_nacimiento = date('Y-m-d', strtotime('-' . rand(18, 50) . ' years'));
 
-            // contrasena  "123456"
+            // Contraseña "123456"
             $contrasena = password_hash('123456', PASSWORD_DEFAULT);
 
-            // Generar saldo aleatorio entre 10 y 1000
+            // Generaro saldo aleatorio entre 10 y 1000
             $saldo = rand(10, 1000);
 
-            // Insertar los datos en la base de datos
+            // Inserto los datos en la base de datos
             $sql = "INSERT INTO {$this->table} (nombre, apellidos, nombre_usuario, email, fecha_nacimiento, contrasena, saldo) VALUES (:nombre, :apellidos, :nombre_usuario, :email, :fecha_nacimiento, :contrasena, :saldo)";
             $stmt = $db->prepare($sql);
             $stmt->bindParam(':nombre', $nombre);
@@ -61,16 +80,18 @@ class UsuarioModel extends Model
             $stmt->execute();
         }
 
-        // Guardar el mensaje en la sesión
         session_start();
-        $_SESSION['mensaje'] = "Base de datos creada, se han insertado {$cantidad} usuarios de prueba con saldo aleatorio";
+        $_SESSION['mensaje'] = "Base de datos creada, se han insertado {$cantidad} usuarios de prueba con saldo aleatorio.";
 
         header('Location: /');
         exit();
     }
 
-
-    // Metodo para crear las tablas y poblar con datos de prueba
+    /*
+    *
+    * Metodo --> para crear las tablas y poblar con datos de prueba
+    *
+    */
     public function crearTablasUsuarios(): void
     {
         // Crear la tabla si no existe
@@ -80,6 +101,28 @@ class UsuarioModel extends Model
         $this->insertarDatosPrueba();
     }
 
+    /*
+    *
+    * Metodo --> para comprobar si la base de datos ya existe
+    *
+    */
+    public function baseDeDatosExistente(): bool
+    {
+        $db = Database::getConnection();
+
+        // Comprobar si la tabla 'usuarios' existe
+        $query = "SHOW TABLES LIKE 'usuarios'";
+        $stmt = $db->prepare($query);
+        $stmt->execute();
+
+        return $stmt->rowCount() > 0;
+    }
+
+    /*
+    *
+    * Metodo --> para obtener un usuario por su nombre
+    *
+    */
     public function obtenerUsuarioPorNombre($nombreUsuario)
     {
         try {
@@ -89,12 +132,18 @@ class UsuarioModel extends Model
             $stmt->bindParam(':usuario', $nombreUsuario);
             $stmt->execute();
 
-            return $stmt->fetch(\PDO::FETCH_ASSOC);
+            // Si se encuentra el usuario, devuelve los datos, de lo contrario, false
+            return $stmt->fetch(\PDO::FETCH_ASSOC) ?: false;
         } catch (\PDOException $e) {
             throw new \Exception("Error al consultar el usuario: " . $e->getMessage());
         }
     }
 
+    /*
+    *
+    * Metodo --> para obtener un usuario por su email
+    *
+    */
     public function obtenerUsuarioPorEmail($email)
     {
         try {
@@ -110,6 +159,11 @@ class UsuarioModel extends Model
         }
     }
 
+    /*
+    *
+    * Metodo --> para obtener un usuario por su id
+    *
+    */
     public function obtenerUsuarioPorId($id)
     {
         try {
@@ -125,6 +179,11 @@ class UsuarioModel extends Model
         }
     }
 
+    /*
+    *
+    * Metodo --> para poder actualizar los datos de un usuario
+    *
+    */
     public function updateUser($id, $nombre, $apellidos, $nombre_usuario, $email, $fecha_nacimiento)
     {
         try {
@@ -155,7 +214,11 @@ class UsuarioModel extends Model
     }
 
 
-    // Registrar un nuevo usuario
+    /*
+    *
+    * Metodo --> te permite insertar un nuevo usuario en la base de datos
+    *
+    */
     public function registrarUsuario($datos)
     {
         $sql = "INSERT INTO usuarios (nombre, apellidos, nombre_usuario, email, fecha_nacimiento, contrasena, saldo) 
@@ -174,8 +237,11 @@ class UsuarioModel extends Model
         $stmt->execute();
     }
 
-
-    // Transacción para transferir saldo entre usuarios
+    /*
+    *
+    * Metodo --> Transacción para transferir saldo entre usuarios
+    *
+    */
     public function transferirSaldo($usuarioIdRemitente, $nombreUsuarioDestino, $saldo)
     {
         $db = Database::getConnection();
@@ -219,15 +285,11 @@ class UsuarioModel extends Model
         }
     }
 
-
-    public function getAllUsers()
-    {
-        $db = Database::getConnection();
-        $stmt = $db->prepare("SELECT id, nombre, apellidos, nombre_usuario, email FROM usuarios");
-        $stmt->execute();
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
-    }
-
+    /*
+    *
+    * Metodo --> Para borra un usuario mediante su ID
+    *
+    */
     public function deleteUser($id)
     {
         $db = Database::getConnection();
@@ -236,34 +298,101 @@ class UsuarioModel extends Model
         $stmt->execute();
         return $stmt->rowCount();
     }
-    public function getAllUsersWithPagination($page = 1, $perPage = 5)
+    /*
+    *
+    * Metodo --> Que obtiene todos los usuarios de la base de datos con una paginacion de 5 en 5
+    *
+    */
+    public function getAllUsersWithPagination($page = 1, $perPage = 5, $filters = [])
     {
         try {
+            // Obtener la conexión a la base de datos
             $db = Database::getConnection();
 
-            // Calculate offset
+            // Iniciar la consulta SQL base
+            $query = "SELECT id, nombre, apellidos, nombre_usuario, email, fecha_nacimiento, saldo 
+                 FROM usuarios 
+                 WHERE 1=1";
+
+            $params = [];
+
+            // Aplicamos todos los filtros
+            if (!empty($filters['nombre'])) {
+                $query .= " AND nombre LIKE :nombre";
+                $params[':nombre'] = '%' . $filters['nombre'] . '%';
+            }
+
+            if (!empty($filters['apellidos'])) {
+                $query .= " AND apellidos LIKE :apellidos";
+                $params[':apellidos'] = '%' . $filters['apellidos'] . '%';
+            }
+
+            if (!empty($filters['nombre_usuario'])) {
+                $query .= " AND nombre_usuario LIKE :nombre_usuario";
+                $params[':nombre_usuario'] = '%' . $filters['nombre_usuario'] . '%';
+            }
+
+            if (!empty($filters['email'])) {
+                $query .= " AND email LIKE :email";
+                $params[':email'] = '%' . $filters['email'] . '%';
+            }
+
+            if (!empty($filters['fecha_nacimiento'])) {
+                $query .= " AND fecha_nacimiento = :fecha_nacimiento";
+                $params[':fecha_nacimiento'] = $filters['fecha_nacimiento'];
+            }
+
+            if (!empty($filters['saldo_min'])) {
+                $query .= " AND saldo >= :saldo_min";
+                $params[':saldo_min'] = $filters['saldo_min'];
+            }
+
+            if (!empty($filters['saldo_max'])) {
+                $query .= " AND saldo <= :saldo_max";
+                $params[':saldo_max'] = $filters['saldo_max'];
+            }
+
+            // Añadir orden y paginación a la consulta
+            $query .= " ORDER BY id LIMIT :limit OFFSET :offset";
+
+            // Calcular el desplazamiento según la página actual
             $offset = ($page - 1) * $perPage;
 
-            // Get paginated users
-            $stmt = $db->prepare("SELECT id, nombre, apellidos, nombre_usuario, email 
-                             FROM usuarios 
-                             ORDER BY id 
-                             LIMIT :limit OFFSET :offset");
+            // Preparar la consulta SQL con los parámetros
+            $stmt = $db->prepare($query);
 
+            // Asignar los valores a los parámetros
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+
+            // Asignar los valores para la paginación
             $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
             $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+
+            // Ejecutar la consulta y obtener los usuarios
             $stmt->execute();
             $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-            // Get total count of users
-            $totalStmt = $db->query("SELECT COUNT(*) FROM usuarios");
-            $total = $totalStmt->fetchColumn();
+            // Preparar una consulta para contar el total de usuarios según los filtros aplicados
+            $countQuery = str_replace(
+                'SELECT id, nombre, apellidos, nombre_usuario, email, fecha_nacimiento, saldo',
+                'SELECT COUNT(*)',
+                substr($query, 0, strpos($query, 'ORDER BY'))
+            );
+            $countStmt = $db->prepare($countQuery);
 
+            foreach ($params as $key => $value) {
+                $countStmt->bindValue($key, $value);
+            }
+
+            $countStmt->execute();
+            $total = $countStmt->fetchColumn();  // Obtener el total de usuarios filtrados
             return [
                 'users' => $users,
                 'total' => $total,
-                'totalPages' => ceil($total / $perPage),
-                'currentPage' => $page
+                'totalPages' => ceil($total / $perPage),  // Calcular el numero total de paginas
+                'currentPage' => $page 
             ];
         } catch (\PDOException $e) {
             throw new \Exception("Error al obtener usuarios: " . $e->getMessage());

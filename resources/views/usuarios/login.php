@@ -12,16 +12,17 @@
         <form action="/login" method="POST" class="formulario">
             <h2>Iniciar Sesión</h2>
 
-            <!-- Mostrar errores -->
-            <?php if (!empty($data)): ?>
-                <p style="color: red;"><?= htmlspecialchars($data['error']) ?></p>
+            <?php if (!empty($data['errores'])): ?>
+                <?php foreach ($data['errores'] as $error): ?>
+                    <p style="color: red;"><?= htmlspecialchars($error) ?></p>
+                <?php endforeach; ?>
             <?php endif; ?>
 
             <label for="usuario">Nombre de usuario:</label>
-            <input type="text" id="usuario" name="usuario" placeholder="Introduce tu usuario" required>
+            <input type="text" id="usuario" name="usuario" placeholder="Introduce tu usuario">
 
             <label for="contraseña">Contraseña:</label>
-            <input type="password" id="contraseña" name="contraseña" placeholder="Introduce tu contraseña" required>
+            <input type="password" id="contraseña" name="contraseña" placeholder="Introduce tu contraseña">
 
             <button type="submit" class="btn-enviar">Iniciar sesión</button>
         </form>

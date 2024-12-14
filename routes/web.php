@@ -39,11 +39,9 @@ Route::post('/usuario/editar', [UsuarioController::class, 'actualizarUsuario']);
 //Ruta para poder enviar saldo a otro usuario
 Route::post('/usuario/enviar-saldo', [UsuarioController::class, 'enviarSaldo']);
 
-Route::get('/lista', [UsuarioController::class, 'listarUsuarios']);
-Route::get('/lista/editar', [UsuarioController::class, 'editarUsuario']);
-Route::post('/lista/eliminar', [UsuarioController::class, 'eliminarUsuario']);
-
-
+Route::get('/usuarios', [UsuarioController::class, 'listarUsuarios']);
+Route::get('/usuarios/editar', [UsuarioController::class, 'editarUsuario']);
+Route::post('/usuarios/eliminar', [UsuarioController::class, 'eliminarUsuario']);
 
 // Ruta para cerrar sesión
 Route::get('/logout', [UsuarioController::class, 'logout']);
