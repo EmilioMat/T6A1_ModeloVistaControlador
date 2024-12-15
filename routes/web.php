@@ -39,7 +39,7 @@ Route::get('/usuario/:id', [UsuarioController::class, 'mostrarPanel']);
 Route::post('/usuario/enviar-saldo', [UsuarioController::class, 'enviarSaldo']);
 
 Route::get('/usuarios', [UsuarioController::class, 'listarUsuarios']);
-Route::get('/usuarios/editar', [UsuarioController::class, 'editarUsuario']);
+Route::get('/usuarios/editar/:id', [UsuarioController::class, 'editarUsuario']);
 Route::post('/usuarios/eliminar', [UsuarioController::class, 'eliminarUsuario']);
 
 //Ruta para modificar los datos del usuario
